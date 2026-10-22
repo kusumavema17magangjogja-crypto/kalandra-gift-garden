@@ -98,7 +98,7 @@ function useStoreValue() {
         customerName: user.name, customerEmail: user.email, phone: user.phone, city: s.city,
         address: user.address || "-", items: s.cart, subtotal, shipping, total: subtotal + shipping,
         status: "Menunggu Pembayaran", createdAt: new Date().toISOString(),
-        deliveryDate: s.cart[0].deliveryDate,
+        deliveryDate: s.cart[0]!.deliveryDate,
       };
       setS((p) => ({
         ...p, orders: [order, ...p.orders], cart: [],

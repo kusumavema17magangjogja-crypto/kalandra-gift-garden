@@ -38,7 +38,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const custom = { to, from, message, ribbon, deliveryDate: date?.toISOString() ?? "", addons, qty };
 
   const add = () => {
-    if (!to || !from || !date) return toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+    if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
     addToCart({ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom });
     toast.success("Ditambahkan ke keranjang");
     onOpenChange(false);

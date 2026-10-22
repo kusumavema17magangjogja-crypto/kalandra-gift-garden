@@ -18,7 +18,7 @@ import { formatDate, formatIDR, type CartItem } from "@/lib/data";
 type Tab = "data" | "password" | "orders";
 
 export const Route = createFileRoute("/profile")({
-  validateSearch: (s: Record<string, unknown>): { tab?: Tab } => ({ tab: ["data", "password", "orders"].includes(s.tab as string) ? (s.tab as Tab) : undefined }),
+  validateSearch: (s: Record<string, unknown>): { tab?: Tab | undefined } => ({ tab: ["data", "password", "orders"].includes(s["tab"] as string) ? (s["tab"] as Tab) : undefined }),
   head: () => ({
     meta: [
       { title: "Profil Saya — Kalandra Hampers" },
@@ -56,9 +56,9 @@ function Profile() {
 
   const savePw = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.cur !== s.user!.password) return toast.error("Password saat ini salah");
-    if (pw.next.length < 8) return toast.error("Password baru minimal 8 karakter");
-    if (pw.next !== pw.confirm) return toast.error("Konfirmasi tidak cocok");
+    if (pw.cur !== s.user!.password) return void toast.error("Password saat ini salah");
+    if (pw.next.length < 8) return void toast.error("Password baru minimal 8 karakter");
+    if (pw.next !== pw.confirm) return void toast.error("Konfirmasi tidak cocok");
     s.updateProfile({ password: pw.next }); setPw({ cur: "", next: "", confirm: "" }); toast.success("Password diperbarui");
   };
 
