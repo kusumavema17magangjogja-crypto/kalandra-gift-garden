@@ -64,7 +64,7 @@ function Login() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const err = login(email, pw);
-    if (err) return toast.error(err);
+    if (err) return void toast.error(err);
     toast.success("Selamat datang kembali!");
     setAuthOpen(null);
   };
@@ -87,11 +87,11 @@ function Login() {
 function Register() {
   const { register, setAuthOpen } = useStore();
   const [f, setF] = useState({ name: "", phone: "", email: "", password: "", confirm: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const er: Record<string, string> = {};
+    const er: Partial<Record<keyof typeof f, string>> = {};
     if (f.name.trim().length < 3) er.name = "Nama minimal 3 karakter";
     if (!/^(62|08)\d{8,12}$/.test(f.phone.replace(/\D/g, ""))) er.phone = "Nomor WhatsApp tidak valid (contoh 0812…)";
     if (!/^\S+@\S+\.\S+$/.test(f.email)) er.email = "Email tidak valid";
@@ -101,7 +101,7 @@ function Register() {
     if (Object.keys(er).length) return;
     const phone = f.phone.replace(/\D/g, "").replace(/^0/, "62");
     const err = register({ name: f.name.trim(), phone, email: f.email.trim(), password: f.password });
-    if (err) return toast.error(err);
+    if (err) return void toast.error(err);
     toast.success("Akun berhasil dibuat!");
     setAuthOpen(null);
   };
@@ -145,15 +145,15 @@ function Forgot() {
 
   const request = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userExists(email)) return toast.error("Email tidak terdaftar");
+    if (!userExists(email)) return void toast.error("Email tidak terdaftar");
     toast.success("Kode OTP dikirim (demo: 1234)");
     setStep(2); setTimer(60);
   };
   const verify = () => (otp === "1234" ? setStep(3) : toast.error("Kode OTP salah"));
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.length < 8) return toast.error("Password minimal 8 karakter");
-    if (pw !== confirm) return toast.error("Konfirmasi tidak cocok");
+    if (pw.length < 8) return void toast.error("Password minimal 8 karakter");
+    if (pw !== confirm) return void toast.error("Konfirmasi tidak cocok");
     resetPassword(email, pw); setDone(true);
   };
 

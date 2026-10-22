@@ -144,8 +144,8 @@ function Overview({ go }: { go: (v: View) => void }) {
           <ul className="mt-4 divide-y">
             {orders.slice(0, 5).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                <img src={o.items[0].image} alt="" className="h-10 w-10 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1"><p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p><p className="truncate text-xs text-muted-foreground">{o.items[0].name} · {o.city}</p></div>
+                <img src={o.items[0]!.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1"><p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p><p className="truncate text-xs text-muted-foreground">{o.items[0]!.name} · {o.city}</p></div>
                 <span className="font-semibold">{formatIDR(o.total)}</span><StatusBadge status={o.status} />
               </li>
             ))}
@@ -237,7 +237,7 @@ function Products() {
 
   const save = () => {
     if (!edit) return;
-    if (!edit.name.trim() || edit.price <= 0) return toast.error("Nama dan harga wajib diisi");
+    if (!edit.name.trim() || edit.price <= 0) return void toast.error("Nama dan harga wajib diisi");
     saveProduct(edit); toast.success("Produk disimpan"); setEdit(null);
   };
 
