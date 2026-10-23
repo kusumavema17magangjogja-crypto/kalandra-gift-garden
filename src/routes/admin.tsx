@@ -225,7 +225,7 @@ function Orders() {
   );
 }
 
-const emptyProduct = (): Product => ({ id: "p" + Date.now(), name: "", category: CATEGORIES[0], price: 0, stock: 10, image: IMAGES.hero, description: "", active: true, tags: [] });
+const emptyProduct = (): Product => ({ id: "p" + Date.now(), name: "", category: CATEGORIES[0], price: 0, stock: 10, image: IMAGES.hero, description: "", active: true, tags: [], rating: 5, reviews: 0 });
 
 function Products() {
   const { products, saveProduct, deleteProduct } = useStore();
