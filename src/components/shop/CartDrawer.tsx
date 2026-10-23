@@ -1,21 +1,13 @@
-import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { Minus, Plus, Trash2, ShoppingBag, MessageCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/lib/store";
-import { ADDONS, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS } from "@/lib/data";
+import { ADDONS, buildCartWaMessage, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS, waLink } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
   const s = useStore();
-  const navigate = useNavigate();
-  const checkout = () => {
-    if (!s.user) { s.setCartOpen(false); s.setAuthOpen("login"); toast.info("Silakan masuk untuk checkout"); return; }
-    const o = s.checkout();
-    if (o) { toast.success(`Pesanan ${o.id} berhasil dibuat!`); s.setCartOpen(false); navigate({ to: "/profile", search: { tab: "orders" } }); }
-  };
   return (
     <Sheet open={s.cartOpen} onOpenChange={s.setCartOpen}>
       <SheetContent className="flex w-full flex-col sm:max-w-md">
@@ -54,7 +46,7 @@ export function CartDrawer() {
             <div className="flex justify-between"><span className="text-muted-foreground">Ongkir ({s.city})</span><span>{formatIDR(s.shippingFee)}</span></div>
             <Separator />
             <div className="flex justify-between text-base font-semibold"><span>Total</span><span className="font-serif text-xl text-primary">{formatIDR(s.cartSubtotal + s.shippingFee)}</span></div>
-            <Button className="w-full" size="lg" onClick={checkout}>Checkout Sekarang</Button>
+            <Button asChild className="w-full" size="lg"><a href={waLink(s.settings.waNumber, buildCartWaMessage(s.cart, s.city, s.shippingFee))} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Checkout via WhatsApp</a></Button>
           </div>
         )}
       </SheetContent>

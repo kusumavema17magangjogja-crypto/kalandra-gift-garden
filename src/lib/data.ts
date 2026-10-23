@@ -168,6 +168,17 @@ export const SEED_USERS: User[] = [
 export const waLink = (phone: string, text: string) =>
   `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 
+export function buildCartWaMessage(items: CartItem[], city: string, shipping: number) {
+  const subtotal = items.reduce((total, item) => total + itemTotal(item), 0);
+  return [
+    "Halo Kalandra, saya ingin checkout keranjang:",
+    ...items.map((item, index) => `${index + 1}. ${buildWaMessage({ name: item.name, price: item.basePrice }, item, city)}`),
+    `Subtotal: ${formatIDR(subtotal)}`,
+    `Ongkir (${city}): ${formatIDR(shipping)}`,
+    `Total pesanan: ${formatIDR(subtotal + shipping)}`,
+  ].join("\n\n");
+}
+
 export function buildWaMessage(p: { name: string; price: number }, c: Omit<CartItem, "key" | "productId" | "name" | "image" | "basePrice">, city: string) {
   const addons = ADDONS.filter((a) => c.addons.includes(a.id)).map((a) => a.label).join(", ") || "-";
   return [
