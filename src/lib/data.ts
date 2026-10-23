@@ -4,8 +4,16 @@ import lebaran from "@/assets/lebaran.jpg";
 import newborn from "@/assets/newborn.jpg";
 import birthday from "@/assets/birthday.jpg";
 import corporate from "@/assets/corporate.jpg";
+import lilac from "@/assets/lilac.jpg";
+import fruits from "@/assets/fruits.jpg";
+import ruby from "@/assets/ruby.jpg";
+import eidRoyal from "@/assets/eid-royal.jpg";
+import blushSeserahan from "@/assets/blush-seserahan.jpg";
+import skyNewborn from "@/assets/sky-newborn.jpg";
+import macaron from "@/assets/macaron.jpg";
+import coffee from "@/assets/coffee.jpg";
 
-export const IMAGES = { hero, seserahan, lebaran, newborn, birthday, corporate };
+export const IMAGES = { hero, seserahan, lebaran, newborn, birthday, corporate, lilac, fruits, ruby, eidRoyal, blushSeserahan, skyNewborn, macaron, coffee };
 
 export const CATEGORIES = [
   "Birthday & Anniv",
@@ -13,6 +21,7 @@ export const CATEGORIES = [
   "Seserahan & Hantaran",
   "Baby Born",
   "Corporate Parcel",
+  "Fresh & Healthy",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -22,6 +31,7 @@ export const CATEGORY_EMOJI: Record<Category, string> = {
   "Seserahan & Hantaran": "💍",
   "Baby Born": "👶",
   "Corporate Parcel": "💼",
+  "Fresh & Healthy": "🍊",
 };
 
 export const CITIES = ["Jabodetabek", "Bandung", "Surabaya", "Semarang", "Yogyakarta", "Medan", "Bali"];
@@ -64,6 +74,8 @@ export interface Product {
   description: string;
   active: boolean;
   tags: ProductTag[];
+  rating: number;
+  reviews: number;
 }
 
 export interface CartItem {
