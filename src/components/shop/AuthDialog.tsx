@@ -70,8 +70,7 @@ function Login() {
   };
   return (
     <form onSubmit={submit} className="space-y-4">
-      <DialogHeader><DialogTitle className="font-serif text-3xl text-primary">Masuk</DialogTitle>
-        <DialogDescription>Demo: sari@email.com / kalandra123 · admin@kalandra.id / admin123</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle className="font-serif text-3xl text-primary">Masuk</DialogTitle></DialogHeader>
       <div className="space-y-1.5"><Label htmlFor="le">Email</Label><Input id="le" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
       <div className="space-y-1.5"><Label htmlFor="lp">Password</Label><PasswordInput id="lp" value={pw} onChange={setPw} /></div>
       <div className="flex items-center justify-between text-sm">
