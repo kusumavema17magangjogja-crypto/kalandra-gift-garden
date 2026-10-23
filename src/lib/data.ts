@@ -4,8 +4,16 @@ import lebaran from "@/assets/lebaran.jpg";
 import newborn from "@/assets/newborn.jpg";
 import birthday from "@/assets/birthday.jpg";
 import corporate from "@/assets/corporate.jpg";
+import lilac from "@/assets/lilac.jpg";
+import fruits from "@/assets/fruits.jpg";
+import ruby from "@/assets/ruby.jpg";
+import eidRoyal from "@/assets/eid-royal.jpg";
+import blushSeserahan from "@/assets/blush-seserahan.jpg";
+import skyNewborn from "@/assets/sky-newborn.jpg";
+import macaron from "@/assets/macaron.jpg";
+import coffee from "@/assets/coffee.jpg";
 
-export const IMAGES = { hero, seserahan, lebaran, newborn, birthday, corporate };
+export const IMAGES = { hero, seserahan, lebaran, newborn, birthday, corporate, lilac, fruits, ruby, eidRoyal, blushSeserahan, skyNewborn, macaron, coffee };
 
 export const CATEGORIES = [
   "Birthday & Anniv",
@@ -13,6 +21,7 @@ export const CATEGORIES = [
   "Seserahan & Hantaran",
   "Baby Born",
   "Corporate Parcel",
+  "Fresh & Healthy",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -22,6 +31,7 @@ export const CATEGORY_EMOJI: Record<Category, string> = {
   "Seserahan & Hantaran": "💍",
   "Baby Born": "👶",
   "Corporate Parcel": "💼",
+  "Fresh & Healthy": "🍊",
 };
 
 export const CITIES = ["Jabodetabek", "Bandung", "Surabaya", "Semarang", "Yogyakarta", "Medan", "Bali"];
@@ -64,6 +74,8 @@ export interface Product {
   description: string;
   active: boolean;
   tags: ProductTag[];
+  rating: number;
+  reviews: number;
 }
 
 export interface CartItem {
@@ -120,14 +132,22 @@ export const itemTotal = (i: CartItem) => (i.basePrice + addonsTotal(i.addons)) 
 export const ribbonLabel = (id: string) => RIBBONS.find((r) => r.id === id)?.label ?? id;
 
 export const SEED_PRODUCTS: Product[] = [
-  { id: "p1", name: "Sage Celebration Basket", category: "Birthday & Anniv", price: 785000, stock: 12, image: hero, description: "Keranjang rotan berisi sparkling juice, cokelat artisan, dan bunga kering.", active: true, tags: ["popular", "express"] },
-  { id: "p2", name: "Peach Rose Anniversary Box", category: "Birthday & Anniv", price: 650000, stock: 4, image: birthday, description: "Buket mawar peach, macaron, dan lilin aromaterapi santal.", active: true, tags: ["popular"] },
-  { id: "p3", name: "Parsel Fitri Zamrud", category: "Lebaran & Hari Raya", price: 925000, stock: 20, image: lebaran, description: "Kurma pilihan, kue nastar, putri salju, kastengel dalam box hijau emas.", active: true, tags: ["idulfitri", "popular"] },
-  { id: "p4", name: "Hampers Lebaran Mini Berkah", category: "Lebaran & Hari Raya", price: 450000, stock: 3, image: lebaran, description: "Paket hemat 3 toples kue kering & kurma untuk kerabat.", active: true, tags: ["idulfitri", "express"] },
-  { id: "p5", name: "Seserahan Akrilik Gold 7 Box", category: "Seserahan & Hantaran", price: 3500000, stock: 5, image: seserahan, description: "Set 7 kotak akrilik bingkai emas, dekor bunga & pita terracotta-sage.", active: true, tags: ["hantaran", "popular"] },
-  { id: "p6", name: "Hantaran Mahar Al-Qur'an", category: "Seserahan & Hantaran", price: 1250000, stock: 2, image: seserahan, description: "Box mahar dengan Al-Qur'an, tasbih, dan rangkaian bunga cantik.", active: true, tags: ["hantaran"] },
-  { id: "p7", name: "Little Bunny Newborn Set", category: "Baby Born", price: 595000, stock: 9, image: newborn, description: "Baju bayi katun, boneka kelinci, teether kayu, dan selimut muslin.", active: true, tags: ["express", "popular"] },
-  { id: "p8", name: "Executive Green Gift Box", category: "Corporate Parcel", price: 1150000, stock: 30, image: corporate, description: "Kopi signature, teh hijau, notebook kulit, dan pulpen emas.", active: true, tags: ["express"] },
+  { id: "p1", name: "Sage Celebration Basket", category: "Birthday & Anniv", price: 785000, stock: 12, image: hero, description: "Keranjang rotan berisi sparkling juice, cokelat artisan, dan bunga kering.", active: true, tags: ["popular", "express"], rating: 4.9, reviews: 86 },
+  { id: "p2", name: "Peach Rose Anniversary Box", category: "Birthday & Anniv", price: 650000, stock: 4, image: birthday, description: "Buket mawar peach, macaron, dan lilin aromaterapi santal.", active: true, tags: ["popular"], rating: 4.8, reviews: 64 },
+  { id: "p3", name: "Parsel Fitri Zamrud", category: "Lebaran & Hari Raya", price: 925000, stock: 20, image: lebaran, description: "Kurma pilihan, kue nastar, putri salju, kastengel dalam box hijau emas.", active: true, tags: ["idulfitri", "popular"], rating: 4.9, reviews: 132 },
+  { id: "p4", name: "Hampers Lebaran Mini Berkah", category: "Lebaran & Hari Raya", price: 450000, stock: 3, image: lebaran, description: "Paket hemat 3 toples kue kering & kurma untuk kerabat.", active: true, tags: ["idulfitri", "express"], rating: 4.8, reviews: 98 },
+  { id: "p5", name: "Seserahan Akrilik Gold 7 Box", category: "Seserahan & Hantaran", price: 3500000, stock: 5, image: seserahan, description: "Set 7 kotak akrilik bingkai emas, dekor bunga & pita terracotta-sage.", active: true, tags: ["hantaran", "popular"], rating: 5.0, reviews: 41 },
+  { id: "p6", name: "Hantaran Mahar Al-Qur'an", category: "Seserahan & Hantaran", price: 1250000, stock: 2, image: seserahan, description: "Box mahar dengan Al-Qur'an, tasbih, dan rangkaian bunga cantik.", active: true, tags: ["hantaran"], rating: 4.9, reviews: 37 },
+  { id: "p7", name: "Little Bunny Newborn Set", category: "Baby Born", price: 595000, stock: 9, image: newborn, description: "Baju bayi katun, boneka kelinci, teether kayu, dan selimut muslin.", active: true, tags: ["express", "popular"], rating: 4.9, reviews: 73 },
+  { id: "p8", name: "Executive Green Gift Box", category: "Corporate Parcel", price: 1150000, stock: 30, image: corporate, description: "Kopi signature, teh hijau, notebook kulit, dan pulpen emas.", active: true, tags: ["express"], rating: 4.8, reviews: 55 },
+  { id: "p9", name: "Pastel Lilac Self-Care Box", category: "Birthday & Anniv", price: 385000, stock: 15, image: lilac, description: "Box lilac berisi sabun lavender artisan, lilin kedelai, eye mask sutra, dan teh chamomile organik.", active: true, tags: ["popular"], rating: 4.9, reviews: 112 },
+  { id: "p10", name: "Golden Sunset Fruit & Gourmet Basket", category: "Fresh & Healthy", price: 520000, stock: 8, image: fruits, description: "Keranjang rotan buah premium: anggur shine muscat, sunkist, apel fuji, dan sparkling apple cider.", active: true, tags: ["express", "popular"], rating: 4.9, reviews: 94 },
+  { id: "p11", name: "Ruby Romance Velvet Gift Box", category: "Birthday & Anniv", price: 740000, stock: 6, image: ruby, description: "Box beludru merah dengan mawar segar, truffle dark chocolate, dan mini tumbler emas.", active: true, tags: ["popular"], rating: 4.9, reviews: 78 },
+  { id: "p12", name: "Emerald Eid Royal Feast", category: "Lebaran & Hari Raya", price: 1150000, stock: 4, image: eidRoyal, description: "Box geometris zamrud-emas, 4 toples kristal kue premium, sajadah bludru, dan tasbih emas.", active: true, tags: ["idulfitri", "popular"], rating: 5.0, reviews: 61 },
+  { id: "p13", name: "Blush Floral Acrylic Seserahan Set (5 Trays)", category: "Seserahan & Hantaran", price: 2450000, stock: 3, image: blushSeserahan, description: "5 baki akrilik bening, rangkaian bunga blush-champagne, fairy lights, dan ukiran emas nama mempelai.", active: true, tags: ["hantaran", "popular"], rating: 5.0, reviews: 29 },
+  { id: "p14", name: "Pastel Sky Newborn Milestone Hamper", category: "Baby Born", price: 475000, stock: 10, image: skyNewborn, description: "Box kayu biru-putih: romper katun organik, bib silikon, boneka, dan kartu milestone kayu.", active: true, tags: ["express"], rating: 4.9, reviews: 67 },
+  { id: "p15", name: "Sweet Blossom Macaron & Tea Tower", category: "Birthday & Anniv", price: 320000, stock: 14, image: macaron, description: "Tower pastel berisi 12 macaron Prancis, buket bunga kering mini, dan teh stroberi Twinings.", active: true, tags: ["express", "popular"], rating: 4.8, reviews: 121 },
+  { id: "p16", name: "Artisan Coffee & Walnut Wood Executive Set", category: "Corporate Parcel", price: 890000, stock: 18, image: coffee, description: "Krat kayu walnut: drip bag kopi single-origin, mug keramik matte, dan coaster kulit.", active: true, tags: ["express"], rating: 4.9, reviews: 48 },
 ];
 
 const mk = (
