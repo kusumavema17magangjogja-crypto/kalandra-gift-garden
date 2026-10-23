@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Gift, Leaf, Search, ShoppingBag, User as UserIcon, MessageCircle, PackageSearch, LayoutDashboard, LogOut, Menu, MapPin } from "lucide-react";
+import { Gift, Leaf, Search, ShoppingBag, User as UserIcon, MessageCircle, PackageSearch, ShieldCheck, LogOut, Menu, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useStore } from "@/lib/store";
 import { CITIES, formatDate, formatIDR, waLink } from "@/lib/data";
 import { StatusBadge } from "./StatusBadge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const NAV = [
   { label: "Koleksi Hampers", hash: "katalog" },
@@ -79,7 +80,7 @@ export function SiteHeader() {
             <SheetContent side="left">
               <SheetHeader><SheetTitle className="font-serif text-xl text-primary">Kalandra</SheetTitle></SheetHeader>
               <nav className="mt-4 flex flex-col gap-3">{NAV.map((n) => <button key={n.label} className="text-left" onClick={() => go(n.hash)}>{n.label}</button>)}
-                <Link to="/admin" className="text-accent">Admin Panel</Link></nav>
+                 </nav>
             </SheetContent>
           </Sheet>
           <Link to="/" className="flex shrink-0 items-center gap-2">
@@ -102,11 +103,11 @@ export function SiteHeader() {
               </div>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
-            <Button asChild variant="outline" size="sm" className="hidden border-accent text-accent hover:bg-accent hover:text-accent-foreground sm:inline-flex"><Link to="/admin"><LayoutDashboard className="mr-1 h-4 w-4" />Admin Panel</Link></Button>
+           <TooltipProvider delayDuration={250}><div className="ml-auto flex shrink-0 items-center gap-0 sm:gap-1 md:ml-0">
+             <Tooltip><TooltipTrigger asChild><Button asChild variant="ghost" size="icon" className="text-muted-foreground" aria-label="Portal Admin"><Link to="/admin"><ShieldCheck className="h-4 w-4" /></Link></Button></TooltipTrigger><TooltipContent>Portal Admin</TooltipContent></Tooltip>
             {s.user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Akun"><span className="grid h-8 w-8 place-items-center rounded-full bg-rose text-sm font-semibold text-accent-foreground">{s.user.name[0]}</span></Button></DropdownMenuTrigger>
+                 <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Akun"><UserIcon className="h-5 w-5" /></Button></DropdownMenuTrigger></TooltipTrigger><TooltipContent>Akun</TooltipContent></Tooltip>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>{s.user.name}</DropdownMenuLabel><DropdownMenuSeparator />
                   <DropdownMenuItem asChild><Link to="/profile"><UserIcon className="mr-2 h-4 w-4" />Profil Saya</Link></DropdownMenuItem>
@@ -115,12 +116,12 @@ export function SiteHeader() {
                   <DropdownMenuItem onClick={() => { s.logout(); navigate({ to: "/" }); }}><LogOut className="mr-2 h-4 w-4" />Keluar</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : <Button variant="ghost" size="sm" onClick={() => s.setAuthOpen("login")}><UserIcon className="mr-1 h-4 w-4" />Masuk</Button>}
+             ) : <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label="Akun" onClick={() => s.setAuthOpen("login")}><UserIcon className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent>Akun</TooltipContent></Tooltip>}
             <Button variant="ghost" size="icon" className="relative" onClick={() => s.setCartOpen(true)} aria-label="Keranjang">
               <ShoppingBag />
               {s.cartCount > 0 && <span key={s.cartCount} className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 animate-pop place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{s.cartCount}</span>}
             </Button>
-          </div>
+           </div></TooltipProvider>
         </div>
       </div>
       <TrackDialog open={track} onOpenChange={setTrack} />
