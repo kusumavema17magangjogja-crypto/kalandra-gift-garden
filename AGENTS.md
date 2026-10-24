@@ -10,3 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Storefront cart checkout builds a WhatsApp order from cart contents without consulting account state; optional account and admin navigation must remain separate from purchasing.
+- Store settings and category CRUD use the existing shared StoreProvider with hydrated localStorage persistence and nested legacy-settings migration; this browser-local architecture is explicitly requested and must not be presented as multi-user administration.
+- Seed orders are created lazily when initializing state, not during module evaluation, to keep imports safe for the deployed Worker runtime.
