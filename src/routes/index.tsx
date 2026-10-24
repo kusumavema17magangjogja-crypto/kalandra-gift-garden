@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SiteHeader, SiteFooter } from "@/components/shop/SiteHeader";
 import { CustomizeDialog } from "@/components/shop/CustomizeDialog";
 import { useStore } from "@/lib/store";
-import { CATEGORIES, CATEGORY_EMOJI, IMAGES, formatIDR, waLink, type Category, type Product, type ProductTag } from "@/lib/data";
+import { CATEGORY_EMOJI, IMAGES, formatIDR, waLink, type Category, type Product, type ProductTag } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -47,14 +47,16 @@ const REVIEWS = [
 ];
 
 function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
+  const { settings } = useStore();
   const limited = p.stock <= 5;
+  const badge = p.badge ?? (p.tags.includes("express") ? "Same-Day" : limited ? "Slot Terbatas" : "Ready Stock");
   return (
     <article className="group overflow-hidden rounded-2xl border bg-card shadow-soft transition hover:-translate-y-1 hover:shadow-lift">
       <div className="relative aspect-square overflow-hidden">
         <img src={p.image} alt={p.name} loading="lazy" width={1024} height={1024} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium">{CATEGORY_EMOJI[p.category]} {p.category}</span>
         <span className={cn("absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold", p.stock === 0 ? "bg-destructive text-destructive-foreground" : limited ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground")}>
-          {p.stock === 0 ? "Habis" : limited ? "Slot Terbatas" : "Ready Stock"}
+          {p.stock === 0 ? "Habis" : badge}
         </span>
       </div>
       <div className="space-y-3 p-4">
@@ -62,13 +64,14 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
         <p className="line-clamp-2 text-sm text-muted-foreground">{p.description}</p>
         <p className="text-lg font-semibold">{formatIDR(p.price)}</p>
         <Button className="w-full" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>
+        {p.stock > 0 && <Button asChild variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin memesan ${p.name} (${formatIDR(p.price)}).`)} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Order WA</a></Button>}
       </div>
     </article>
   );
 }
 
 function Index() {
-  const { products, settings } = useStore();
+  const { products, categories, settings } = useStore();
   const [tab, setTab] = useState<"all" | ProductTag>("all");
   const [cat, setCat] = useState<Category | null>(null);
   const [picked, setPicked] = useState<Product | null>(null);
@@ -93,14 +96,14 @@ function Index() {
     <div className="min-h-screen">
       <SiteHeader />
       <section className="relative overflow-hidden">
-        <img src={IMAGES.hero} alt="Hampers mewah Kalandra" width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={settings.heroImage} alt={`Hampers ${settings.storeName}`} width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-hero-overlay" />
         <div className="relative mx-auto max-w-7xl px-4 py-24 md:py-36">
-          <p className="text-sm uppercase tracking-[0.3em] text-rose">Luxury Hampers · Seserahan</p>
-          <h1 className="mt-4 max-w-2xl font-serif text-5xl leading-[1.05] text-primary-foreground md:text-7xl">Rangkaian Kasih & Keanggunan di Setiap Momen Berharga</h1>
-          <p className="mt-5 max-w-lg text-primary-foreground/80">Dirangkai tangan, lengkap dengan kartu ucapan personal, dan dikirim fotonya sebelum sampai ke orang tersayang.</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-rose">{settings.storeName} · {settings.storeTagline}</p>
+          <h1 className="mt-4 max-w-2xl font-serif text-5xl leading-[1.05] text-primary-foreground md:text-7xl">{settings.heroHeadline}</h1>
+          <p className="mt-5 max-w-lg text-primary-foreground/80">{settings.heroSubheadline}</p>
           <div className="mt-8 flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button key={c} onClick={() => pickCat(c)} className={cn("rounded-full border px-4 py-2 text-sm backdrop-blur transition", cat === c ? "border-rose bg-rose text-accent-foreground" : "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20")}>
                 {CATEGORY_EMOJI[c]} {c === "Lebaran & Hari Raya" ? "Lebaran & Hari Raya" : c === "Baby Born" ? "Baby Born" : c}
               </button>
@@ -145,7 +148,7 @@ function Index() {
                 <li key={s.t} className="text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-card text-primary shadow-soft"><s.i className="h-5 w-5" /></span><p className="mt-2 text-xs font-semibold">{n + 1}. {s.t}</p></li>
               ))}
             </ol>
-            <Button asChild size="lg" className="mt-8"><a href={waLink(settings.waNumber, "Halo Kalandra, saya ingin konsultasi seserahan.")} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Konsultasi Seserahan</a></Button>
+            <Button asChild size="lg" className="mt-8"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin konsultasi seserahan.`)} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Konsultasi Seserahan</a></Button>
           </div>
         </div>
       </section>
@@ -176,6 +179,7 @@ function Index() {
       </section>
 
       <SiteFooter />
+      <Button asChild size="lg" className="fixed bottom-5 right-5 z-30 rounded-full bg-success text-success-foreground shadow-lift hover:bg-success/90"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin tanya stok & ongkir.`)} target="_blank" rel="noreferrer" aria-label="Tanya Stok & Ongkir"><MessageCircle className="h-5 w-5" /><span className="hidden sm:inline">Tanya Stok & Ongkir</span></a></Button>
       <CustomizeDialog product={picked} onOpenChange={(o) => !o && setPicked(null)} />
     </div>
   );
