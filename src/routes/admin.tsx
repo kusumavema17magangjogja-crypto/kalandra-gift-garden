@@ -40,7 +40,7 @@ type View = "overview" | "orders" | "products" | "customers" | "settings";
 const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Ringkasan", icon: BarChart3 },
   { id: "orders", label: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Katalog Produk", icon: Tag },
+  { id: "products", label: "Kelola Katalog & Kategori", icon: Tag },
   { id: "customers", label: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
@@ -49,7 +49,7 @@ function Admin() {
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const { orders } = useStore();
+  const { orders, settings } = useStore();
   const unread = orders.filter((o) => o.status === "Menunggu Pembayaran").length;
 
   const Nav = ({ compact }: { compact?: boolean }) => (
@@ -67,7 +67,7 @@ function Admin() {
     <div className="flex min-h-screen bg-secondary">
       <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
         <div className="flex items-center gap-2 border-b border-sidebar-border p-4">
-          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />{!collapsed && <span className="font-serif text-xl">Kalandra Admin</span>}
+          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />{!collapsed && <span className="font-serif text-xl">{settings.storeName} Admin</span>}
         </div>
         <Nav compact={collapsed} />
         <button onClick={() => setCollapsed(!collapsed)} className="mt-auto flex items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70" aria-label="Ciutkan sidebar">
@@ -76,7 +76,7 @@ function Admin() {
       </aside>
       <Sheet open={mobile} onOpenChange={setMobile}>
         <SheetContent side="left" className="w-64 border-0 bg-sidebar p-0 text-sidebar-foreground">
-          <div className="flex items-center gap-2 border-b border-sidebar-border p-4"><Gift className="h-6 w-6 text-sidebar-primary" /><span className="font-serif text-xl">Kalandra Admin</span></div>
+          <div className="flex items-center gap-2 border-b border-sidebar-border p-4"><Gift className="h-6 w-6 text-sidebar-primary" /><span className="font-serif text-xl">{settings.storeName} Admin</span></div>
           <Nav />
         </SheetContent>
       </Sheet>
@@ -88,7 +88,7 @@ function Admin() {
             <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi" onClick={() => setView("orders")}>
               <Bell />{unread > 0 && <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{unread}</span>}
             </Button>
-            <div className="hidden items-center gap-2 sm:flex"><span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm text-primary-foreground">AK</span><span className="text-sm font-medium">Admin Kalandra</span></div>
+            <div className="hidden items-center gap-2 sm:flex"><span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm text-primary-foreground">AK</span><span className="text-sm font-medium">Admin {settings.storeName}</span></div>
             <Button asChild variant="outline" size="sm"><Link to="/"><Store className="mr-1 h-4 w-4" />Kembali ke Toko</Link></Button>
           </div>
         </header>
@@ -144,8 +144,8 @@ function Overview({ go }: { go: (v: View) => void }) {
           <ul className="mt-4 divide-y">
             {orders.slice(0, 5).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                <img src={o.items[0]!.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1"><p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p><p className="truncate text-xs text-muted-foreground">{o.items[0]!.name} · {o.city}</p></div>
+                <img src={o.items[0]?.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1"><p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p><p className="truncate text-xs text-muted-foreground">{o.items[0]?.name} · {o.city}</p></div>
                 <span className="font-semibold">{formatIDR(o.total)}</span><StatusBadge status={o.status} />
               </li>
             ))}
@@ -228,7 +228,9 @@ function Orders() {
 const emptyProduct = (): Product => ({ id: "p" + Date.now(), name: "", category: CATEGORIES[0], price: 0, stock: 10, image: IMAGES.hero, description: "", active: true, tags: [], rating: 5, reviews: 0 });
 
 function Products() {
-  const { products, saveProduct, deleteProduct } = useStore();
+  const { products, categories, addCategory, renameCategory, deleteCategory, saveProduct, deleteProduct } = useStore();
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryEdit, setCategoryEdit] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [edit, setEdit] = useState<Product | null>(null);
@@ -237,7 +239,7 @@ function Products() {
 
   const save = () => {
     if (!edit) return;
-    if (!edit.name.trim() || edit.price <= 0) return void toast.error("Nama dan harga wajib diisi");
+    if (!edit.name.trim() || !edit.category.trim() || !edit.image.trim() || !Number.isFinite(edit.price) || edit.price <= 0 || edit.stock < 0) return void toast.error("Nama dan harga wajib diisi");
     saveProduct(edit); toast.success("Produk disimpan"); setEdit(null);
   };
 
@@ -246,8 +248,13 @@ function Products() {
       <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari produk" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={cat} onValueChange={setCat}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
-        <Button onClick={() => setEdit(emptyProduct())}><Plus className="mr-1 h-4 w-4" />Tambah Hampers Baru</Button>
+          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+        <Button onClick={() => setEdit(emptyProduct())}><Plus className="mr-1 h-4 w-4" />Tambah Produk Baru</Button>
+      </div>
+      <div className="mt-5 space-y-3 border-y py-4">
+        <h2 className="font-serif text-xl text-primary">Kategori</h2>
+        <div className="flex flex-wrap gap-2">{categories.map((c) => <div key={c} className="flex items-center gap-1 border px-2 py-1 text-sm"><span>{c}</span><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Ubah kategori ${c}`} onClick={() => { setCategoryEdit(c); setCategoryName(c); }}><Pencil className="h-3 w-3" /></Button><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Hapus kategori ${c}`} onClick={() => { const error = deleteCategory(c); if (error) toast.error(error); else toast.success("Kategori dihapus"); }}><Trash2 className="h-3 w-3" /></Button></div>)}</div>
+        <div className="flex gap-2"><Input aria-label="Nama kategori" placeholder="Nama kategori baru" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} /><Button onClick={() => { if (!categoryName.trim()) return; if (categoryEdit) renameCategory(categoryEdit, categoryName); else addCategory(categoryName); setCategoryName(""); setCategoryEdit(null); toast.success("Kategori disimpan"); }}>{categoryEdit ? "Simpan Kategori" : "Tambah Kategori"}</Button>{categoryEdit && <Button variant="outline" onClick={() => { setCategoryEdit(null); setCategoryName(""); }}>Batal</Button>}</div>
       </div>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((p) => (
@@ -274,15 +281,16 @@ function Products() {
           <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{products.some((p) => p.id === edit?.id) ? "Edit Produk" : "Tambah Produk"}</DialogTitle></DialogHeader>
           {edit && (
             <div className="grid gap-3">
-              <div className="space-y-1.5"><Label>Nama Produk</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="product-name">Nama Produk</Label><Input id="product-name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Kategori</Label>
-                <Select value={edit.category} onValueChange={(v) => setEdit({ ...edit, category: v as Product["category"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+                <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist></div>
+              <div className="space-y-1.5"><Label>Status Badge</Label><Select value={edit.badge ?? (edit.tags.includes("express") ? "Same-Day" : edit.stock <= 5 ? "Slot Terbatas" : "Ready Stock")} onValueChange={(v) => setEdit({ ...edit, badge: v as Product["badge"], tags: v === "Same-Day" ? [...new Set([...edit.tags, "express" as const])] : edit.tags.filter((t) => t !== "express") })}><SelectTrigger aria-label="Status Badge"><SelectValue /></SelectTrigger><SelectContent>{["Ready Stock", "Slot Terbatas", "Same-Day"].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select></div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5"><Label>Harga (Rp)</Label><Input type="number" value={edit.price || ""} onChange={(e) => setEdit({ ...edit, price: +e.target.value })} /></div>
+                <div className="space-y-1.5"><Label htmlFor="product-price">Harga (Rp)</Label><Input id="product-price" type="number" value={edit.price || ""} onChange={(e) => setEdit({ ...edit, price: +e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Stok / Slot</Label><Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: +e.target.value })} /></div>
               </div>
-              <div className="space-y-1.5"><Label>URL Gambar</Label><Input value={edit.image} onChange={(e) => setEdit({ ...edit, image: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label>Deskripsi Singkat</Label><Textarea value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="product-image">URL Gambar</Label><Input id="product-image" value={edit.image} onChange={(e) => setEdit({ ...edit, image: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="product-description">Deskripsi Singkat</Label><Textarea id="product-description" value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
               <label className="flex items-center justify-between rounded-lg border p-3 text-sm">Status Aktif<Switch checked={edit.active} onCheckedChange={(c) => setEdit({ ...edit, active: c })} /></label>
             </div>
           )}
@@ -325,13 +333,31 @@ function Customers() {
 
 function SettingsView() {
   const { settings, updateSettings, resetDemo } = useStore();
-  const [wa, setWa] = useState(settings.waNumber);
+  const [draft, setDraft] = useState(settings);
+  const fields = [
+    ["storeName", "Nama Toko"], ["storeTagline", "Tagline"], ["whatsappNumber", "Nomor WhatsApp (format 628xxx)"],
+    ["instagramUrl", "Link Instagram"], ["tiktokUrl", "Link TikTok"], ["heroHeadline", "Judul Hero Banner"],
+    ["heroSubheadline", "Subtitle Hero Banner"], ["heroImage", "URL Gambar Hero Banner"],
+    ["footerDescription", "Deskripsi Footer"], ["operatingHours", "Jam Operasional"],
+  ] as const;
+  const save = () => {
+    const number = draft.whatsappNumber.replace(/\D/g, "");
+    if (!/^628\d{7,12}$/.test(number)) return void toast.error("Gunakan nomor WhatsApp dengan format 628xxx");
+    if (!draft.storeName.trim()) return void toast.error("Nama toko wajib diisi");
+    for (const key of ["instagramUrl", "tiktokUrl", "heroImage"] as const) {
+      if (draft[key] === settings[key]) continue;
+      try { const url = new URL(draft[key]); if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error(); }
+      catch { return void toast.error("Gunakan URL lengkap http:// atau https://"); }
+    }
+    updateSettings({ ...draft, whatsappNumber: number, storeOpen: settings.storeOpen, citySlots: settings.citySlots });
+    toast.success("Pengaturan toko disimpan");
+  };
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Panel className="space-y-4">
-        <h2 className="font-serif text-xl text-primary">WhatsApp Admin</h2>
-        <div className="space-y-1.5"><Label>Nomor untuk routing checkout (format 62…)</Label>
-          <div className="flex gap-2"><Input value={wa} onChange={(e) => setWa(e.target.value)} /><Button onClick={() => { updateSettings({ waNumber: wa.replace(/\D/g, "") }); toast.success("Nomor WhatsApp disimpan"); }}>Simpan</Button></div></div>
+        <h2 className="font-serif text-xl text-primary">Identitas & Kontak Toko</h2>
+        {fields.map(([key, label]) => <div key={key} className="space-y-1.5"><Label htmlFor={key}>{label}</Label>{key === "heroSubheadline" || key === "footerDescription" ? <Textarea id={key} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} /> : <Input id={key} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} />}</div>)}
+        <Button onClick={save}>Simpan Pengaturan</Button>
         <label className="flex items-center justify-between rounded-lg border p-4">
           <span><span className="block font-medium">Status PO Hari Raya</span><span className="text-sm text-muted-foreground">{settings.storeOpen ? "Buka — pelanggan bisa checkout" : "Tutup — banner tampil di toko"}</span></span>
           <Switch checked={settings.storeOpen} onCheckedChange={(c) => updateSettings({ storeOpen: c })} />
