@@ -23,7 +23,7 @@ export const CATEGORIES = [
   "Corporate Parcel",
   "Fresh & Healthy",
 ] as const;
-export type Category = (typeof CATEGORIES)[number];
+export type Category = string;
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
   "Birthday & Anniv": "🎂",
@@ -76,6 +76,7 @@ export interface Product {
   tags: ProductTag[];
   rating: number;
   reviews: number;
+  badge?: "Ready Stock" | "Slot Terbatas" | "Same-Day";
 }
 
 export interface CartItem {
@@ -164,15 +165,15 @@ const mk = (
   return { id, customerName: name, customerEmail: email, phone, city, address: "Jl. Melati No. 12, " + city, items: [item], subtotal, shipping, total: subtotal + shipping, status, createdAt: created.toISOString(), deliveryDate: delivery.toISOString() };
 };
 
-export const SEED_ORDERS: Order[] = [
-  mk("KLD-24051", "Sari Wulandari", "sari@email.com", "6281234567890", "Jabodetabek", SEED_PRODUCTS[0]!, "Dalam Pengiriman", 1, "Selamat ulang tahun, Ibu tersayang! Semoga sehat selalu.", "Ibu Ratna"),
-  mk("KLD-24050", "Budi Santoso", "budi.s@email.com", "6281298765432", "Bandung", SEED_PRODUCTS[2]!, "Sedang Dirangkai", 1, "Mohon maaf lahir dan batin, keluarga besar Hartono.", "Kel. Hartono", "gold"),
-  mk("KLD-24049", "Anisa Putri", "anisa.p@email.com", "6285711122233", "Surabaya", SEED_PRODUCTS[4]!, "Menunggu Pembayaran", 2, "Untuk calon istriku, dengan segenap cinta.", "Dinda Ayu", "terracotta"),
-  mk("KLD-24048", "Reza Pratama", "reza.p@email.com", "6281355566677", "Bali", SEED_PRODUCTS[6]!, "Selesai", 4, "Selamat datang di dunia, si kecil!", "Baby Arka"),
-  mk("KLD-24047", "PT Nusantara Jaya", "hrd@nusantarajaya.co.id", "6282144455566", "Jabodetabek", SEED_PRODUCTS[7]!, "Selesai", 6, "Terima kasih atas kerja samanya sepanjang tahun.", "Bpk. Hendra", "burgundy"),
-  mk("KLD-24046", "Sari Wulandari", "sari@email.com", "6281234567890", "Jabodetabek", SEED_PRODUCTS[1]!, "Selesai", 20, "Happy anniversary, sayang. 5 tahun bersama!", "Mas Dimas", "terracotta"),
-  mk("KLD-24045", "Dewi Lestari", "dewi.l@email.com", "6287812341234", "Yogyakarta", SEED_PRODUCTS[3]!, "Sedang Dirangkai", 0, "Selamat Idul Fitri, Pakde & Bude.", "Pakde Joko", "gold"),
-  mk("KLD-24044", "Fajar Nugroho", "fajar.n@email.com", "6281977788899", "Medan", SEED_PRODUCTS[5]!, "Menunggu Pembayaran", 0, "Mahar untuk Siti, bismillah.", "Siti Rahma"),
+export const makeSeedOrders = (): Order[] => [
+  mk("KLD-24051", "Sari Wulandari", "sari@email.com", "6281234567890", "Jabodetabek", (SEED_PRODUCTS[0] ?? SEED_PRODUCTS[0]) as Product, "Dalam Pengiriman", 1, "Selamat ulang tahun, Ibu tersayang! Semoga sehat selalu.", "Ibu Ratna"),
+  mk("KLD-24050", "Budi Santoso", "budi.s@email.com", "6281298765432", "Bandung", (SEED_PRODUCTS[2] ?? SEED_PRODUCTS[0]) as Product, "Sedang Dirangkai", 1, "Mohon maaf lahir dan batin, keluarga besar Hartono.", "Kel. Hartono", "gold"),
+  mk("KLD-24049", "Anisa Putri", "anisa.p@email.com", "6285711122233", "Surabaya", (SEED_PRODUCTS[4] ?? SEED_PRODUCTS[0]) as Product, "Menunggu Pembayaran", 2, "Untuk calon istriku, dengan segenap cinta.", "Dinda Ayu", "terracotta"),
+  mk("KLD-24048", "Reza Pratama", "reza.p@email.com", "6281355566677", "Bali", (SEED_PRODUCTS[6] ?? SEED_PRODUCTS[0]) as Product, "Selesai", 4, "Selamat datang di dunia, si kecil!", "Baby Arka"),
+  mk("KLD-24047", "PT Nusantara Jaya", "hrd@nusantarajaya.co.id", "6282144455566", "Jabodetabek", (SEED_PRODUCTS[7] ?? SEED_PRODUCTS[0]) as Product, "Selesai", 6, "Terima kasih atas kerja samanya sepanjang tahun.", "Bpk. Hendra", "burgundy"),
+  mk("KLD-24046", "Sari Wulandari", "sari@email.com", "6281234567890", "Jabodetabek", (SEED_PRODUCTS[1] ?? SEED_PRODUCTS[0]) as Product, "Selesai", 20, "Happy anniversary, sayang. 5 tahun bersama!", "Mas Dimas", "terracotta"),
+  mk("KLD-24045", "Dewi Lestari", "dewi.l@email.com", "6287812341234", "Yogyakarta", (SEED_PRODUCTS[3] ?? SEED_PRODUCTS[0]) as Product, "Sedang Dirangkai", 0, "Selamat Idul Fitri, Pakde & Bude.", "Pakde Joko", "gold"),
+  mk("KLD-24044", "Fajar Nugroho", "fajar.n@email.com", "6281977788899", "Medan", (SEED_PRODUCTS[5] ?? SEED_PRODUCTS[0]) as Product, "Menunggu Pembayaran", 0, "Mahar untuk Siti, bismillah.", "Siti Rahma"),
 ];
 
 export const SEED_USERS: User[] = [

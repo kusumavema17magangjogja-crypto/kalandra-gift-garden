@@ -107,7 +107,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total ({qty}x)</span><span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span></div>
               <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}><ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang</Button>
               <Button asChild variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success">
-                <a href={waLink(settings.waNumber, buildWaMessage(product, custom, city))} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung</a>
+                <a href={waLink(settings.whatsappNumber, buildWaMessage(product, custom, city))} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung</a>
               </Button>
               {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
             </div>

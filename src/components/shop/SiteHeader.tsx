@@ -67,7 +67,7 @@ export function SiteHeader() {
               <SelectTrigger className="h-7 w-36 border-primary-foreground/30 bg-transparent text-xs text-primary-foreground"><MapPin className="h-3 w-3" /><SelectValue /></SelectTrigger>
               <SelectContent>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
-            <a href={waLink(s.settings.waNumber, "Halo Kalandra, saya ingin bertanya.")} target="_blank" rel="noreferrer" className="hidden items-center gap-1 hover:underline sm:flex"><MessageCircle className="h-3.5 w-3.5" />CS WhatsApp</a>
+            <a href={waLink(s.settings.whatsappNumber, "Halo Kalandra, saya ingin bertanya.")} target="_blank" rel="noreferrer" className="hidden items-center gap-1 hover:underline sm:flex"><MessageCircle className="h-3.5 w-3.5" />CS WhatsApp</a>
             <button onClick={() => setTrack(true)} className="flex items-center gap-1 hover:underline"><PackageSearch className="h-3.5 w-3.5" />Lacak</button>
           </div>
         </div>

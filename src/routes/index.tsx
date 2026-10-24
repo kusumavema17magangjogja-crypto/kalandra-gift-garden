@@ -145,7 +145,7 @@ function Index() {
                 <li key={s.t} className="text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-card text-primary shadow-soft"><s.i className="h-5 w-5" /></span><p className="mt-2 text-xs font-semibold">{n + 1}. {s.t}</p></li>
               ))}
             </ol>
-            <Button asChild size="lg" className="mt-8"><a href={waLink(settings.waNumber, "Halo Kalandra, saya ingin konsultasi seserahan.")} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Konsultasi Seserahan</a></Button>
+            <Button asChild size="lg" className="mt-8"><a href={waLink(settings.whatsappNumber, "Halo Kalandra, saya ingin konsultasi seserahan.")} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Konsultasi Seserahan</a></Button>
           </div>
         </div>
       </section>
