@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
 const makeInitial = (): State => ({
   categories: [...CATEGORIES],
   products: SEED_PRODUCTS,
-  orders: makeSeedOrders,
+  orders: makeSeedOrders(),
   users: SEED_USERS,
   cart: [],
   currentEmail: null,
