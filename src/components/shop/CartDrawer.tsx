@@ -1,4 +1,5 @@
 import { Minus, Plus, Trash2, ShoppingBag, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -46,7 +47,12 @@ export function CartDrawer() {
             <div className="flex justify-between"><span className="text-muted-foreground">Ongkir ({s.city})</span><span>{formatIDR(s.shippingFee)}</span></div>
             <Separator />
             <div className="flex justify-between text-base font-semibold"><span>Total</span><span className="font-serif text-xl text-primary">{formatIDR(s.cartSubtotal + s.shippingFee)}</span></div>
-            <Button asChild className="w-full" size="lg"><a href={waLink(s.settings.whatsappNumber, buildCartWaMessage(s.cart, s.city, s.shippingFee))} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Checkout via WhatsApp</a></Button>
+            <Button className="w-full" size="lg" onClick={() => {
+              const message = buildCartWaMessage(s.cart, s.city, s.shippingFee);
+              const order = s.checkout();
+              if (order) toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
+              window.open(waLink(s.settings.whatsappNumber, message), "_blank", "noreferrer");
+            }}><MessageCircle className="mr-2 h-4 w-4" />Checkout via WhatsApp</Button>
           </div>
         )}
       </SheetContent>

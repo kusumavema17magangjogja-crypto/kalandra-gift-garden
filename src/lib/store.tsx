@@ -22,9 +22,7 @@ export interface Settings {
 interface State {
   categories: string[];
   products: Product[];
-  orders: Order[];
   users: User[];
-  cart: CartItem[];
   currentEmail: string | null;
   city: string;
   settings: Settings;
@@ -43,21 +41,70 @@ export const DEFAULT_SETTINGS: Settings = {
 const makeInitial = (): State => ({
   categories: [...CATEGORIES],
   products: SEED_PRODUCTS,
-  orders: makeSeedOrders(),
   users: SEED_USERS,
-  cart: [],
   currentEmail: null,
   city: "Jabodetabek",
   settings: DEFAULT_SETTINGS,
 });
 
 const KEY = "kalandra-state-v1";
+export const ORDERS_KEY = "kalandra_orders";
+const CART_PREFIX = "kalandra-cart-";
+const GUEST_KEY = "kalandra-guest-id";
+const ORDERS_EVENT = "kalandra:orders";
+
+// ---------- Orders: central list shared by storefront & admin ----------
+
+function readOrders(): Order[] {
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY);
+    if (raw) return JSON.parse(raw) as Order[];
+  } catch {}
+  const seeded = makeSeedOrders();
+  try { localStorage.setItem(ORDERS_KEY, JSON.stringify(seeded)); } catch {}
+  return seeded;
+}
+
+function writeOrders(orders: Order[]) {
+  try { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); } catch {}
+  window.dispatchEvent(new CustomEvent(ORDERS_EVENT));
+}
+
+// ---------- Cart: isolated per user / guest session ----------
+
+function guestId(): string {
+  try {
+    let id = localStorage.getItem(GUEST_KEY);
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem(GUEST_KEY, id); }
+    return id;
+  } catch { return "guest"; }
+}
+
+const cartKeyFor = (owner: string | null) => (owner ? CART_PREFIX + owner : null);
+
+function readCart(owner: string | null): CartItem[] {
+  const key = cartKeyFor(owner);
+  if (!key) return [];
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]") as CartItem[]; } catch { return []; }
+}
+
+function writeCart(owner: string | null, cart: CartItem[]) {
+  const key = cartKeyFor(owner);
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify(cart)); } catch {}
+}
+
+// ---------- Store ----------
 
 function useStoreValue() {
   const [s, setS] = useState<State>(makeInitial);
+  const [orders, setOrders] = useState<Order[]>(makeSeedOrders);
+  const [cartOwner, setCartOwner] = useState<string | null>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState<null | "login" | "register" | "forgot">(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -74,6 +121,7 @@ function useStoreValue() {
           },
         });
       }
+      setOrders(readOrders());
     } catch {}
     setLoaded(true);
   }, []);
@@ -81,21 +129,57 @@ function useStoreValue() {
     if (loaded) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} }
   }, [s, loaded]);
 
+  // Keep orders in sync with other tabs / admin writes.
+  useEffect(() => {
+    const sync = () => setOrders(readOrders());
+    window.addEventListener(ORDERS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => { window.removeEventListener(ORDERS_EVENT, sync); window.removeEventListener("storage", sync); };
+  }, []);
+
   const user = s.users.find((u) => u.email === s.currentEmail) ?? null;
+  const isAdmin = user?.role === "admin";
+
+  // Cart owner: admin has none; customers use their email; guests use a session id.
+  useEffect(() => {
+    const owner = user ? (user.role === "admin" ? null : user.email) : guestId();
+    setCartOwner(owner);
+    setCart(readCart(owner));
+  }, [user?.email, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (cartOwner !== null || cart.length === 0) writeCart(cartOwner, cart);
+  }, [cart, cartOwner]);
+
+  const mutateOrders = (fn: (prev: Order[]) => Order[]) => setOrders((prev) => { const next = fn(prev); writeOrders(next); return next; });
+
+  const recordOrder = (order: Order) => {
+    mutateOrders((prev) => [order, ...prev]);
+    return order;
+  };
 
   const api = {
     ...s,
     user,
-    cartOpen, setCartOpen, authOpen, setAuthOpen,
+    isAdmin,
+    orders,
+    cart,
+    cartOpen, setCartOpen, authOpen, setAuthOpen, adminOpen, setAdminOpen,
     setCity: (city: string) => setS((p) => ({ ...p, city })),
     shippingFee: SHIPPING_FEE[s.city] ?? 30000,
-    cartSubtotal: s.cart.reduce((t, i) => t + itemTotal(i), 0),
-    cartCount: s.cart.reduce((t, i) => t + i.qty, 0),
+    cartSubtotal: cart.reduce((t, i) => t + itemTotal(i), 0),
+    cartCount: cart.reduce((t, i) => t + i.qty, 0),
 
     login(email: string, password: string) {
       const u = s.users.find((x) => x.email.toLowerCase() === email.toLowerCase());
       if (!u || u.password !== password) return "Email atau password salah";
       setS((p) => ({ ...p, currentEmail: u.email }));
+      return null;
+    },
+    loginAdmin(email: string, password: string) {
+      const err = api.login(email, password);
+      if (err) return err;
+      const u = s.users.find((x) => x.email.toLowerCase() === email.toLowerCase());
+      if (u?.role !== "admin") { setS((p) => ({ ...p, currentEmail: null })); return "Akun ini bukan admin Kalandra"; }
       return null;
     },
     register(u: Omit<User, "role" | "address" | "city">) {
@@ -112,34 +196,43 @@ function useStoreValue() {
       setS((p) => ({ ...p, users: p.users.map((u) => (u.email === p.currentEmail ? { ...u, ...patch } : u)), currentEmail: patch.email ?? p.currentEmail }));
     },
 
-    addToCart: (item: CartItem) => setS((p) => ({ ...p, cart: [...p.cart, item] })),
+    addToCart(item: CartItem) {
+      if (isAdmin) return "Admin tidak memiliki keranjang belanja";
+      setCart((p) => [...p, item]);
+      return null;
+    },
     updateQty: (key: string, qty: number) =>
-      setS((p) => ({ ...p, cart: p.cart.map((i) => (i.key === key ? { ...i, qty: Math.max(1, qty) } : i)) })),
-    removeFromCart: (key: string) => setS((p) => ({ ...p, cart: p.cart.filter((i) => i.key !== key) })),
+      setCart((p) => p.map((i) => (i.key === key ? { ...i, qty: Math.max(1, qty) } : i))),
+    removeFromCart: (key: string) => setCart((p) => p.filter((i) => i.key !== key)),
 
     checkout(): Order | null {
-      const firstItem = s.cart[0];
-      if (!user || !firstItem) return null;
-      const subtotal = s.cart.reduce((t, i) => t + itemTotal(i), 0);
+      const firstItem = cart[0];
+      if (isAdmin || !firstItem) return null;
+      const subtotal = cart.reduce((t, i) => t + itemTotal(i), 0);
       const shipping = SHIPPING_FEE[s.city] ?? 30000;
       const order: Order = {
-        id: "KLD-" + (24052 + s.orders.length + Math.floor(Math.random() * 9)),
-        customerName: user.name, customerEmail: user.email, phone: user.phone, city: s.city,
-        address: user.address || "-", items: s.cart, subtotal, shipping, total: subtotal + shipping,
+        id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+        customerName: user?.name ?? firstItem.from ?? "Pelanggan",
+        customerEmail: user?.email ?? "guest@kalandra.id",
+        phone: user?.phone ?? "-", city: s.city,
+        address: user?.address || "-", items: cart, subtotal, shipping, total: subtotal + shipping,
         status: "Menunggu Pembayaran", createdAt: new Date().toISOString(),
         deliveryDate: firstItem.deliveryDate,
       };
+      recordOrder(order);
+      setCart([]);
       setS((p) => ({
-        ...p, orders: [order, ...p.orders], cart: [],
+        ...p,
         products: p.products.map((pr) => {
-          const q = p.cart.filter((c) => c.productId === pr.id).reduce((t, c) => t + c.qty, 0);
+          const q = cart.filter((c) => c.productId === pr.id).reduce((t, c) => t + c.qty, 0);
           return q ? { ...pr, stock: Math.max(0, pr.stock - q) } : pr;
         }),
       }));
       return order;
     },
+    recordOrder,
     setOrderStatus: (id: string, status: OrderStatus) =>
-      setS((p) => ({ ...p, orders: p.orders.map((o) => (o.id === id ? { ...o, status } : o)) })),
+      mutateOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o))),
 
     addCategory: (name: string) => setS((p) => ({ ...p, categories: [...new Set([...p.categories, name.trim()])].filter(Boolean) })),
     renameCategory: (name: string, next: string) => setS((p) => ({ ...p,
@@ -161,7 +254,12 @@ function useStoreValue() {
       })),
     deleteProduct: (id: string) => setS((p) => ({ ...p, products: p.products.filter((x) => x.id !== id) })),
     updateSettings: (patch: Partial<Settings>) => setS((p) => ({ ...p, settings: { ...p.settings, ...patch } })),
-    resetDemo: () => setS(makeInitial()),
+    resetDemo() {
+      setS(makeInitial());
+      const seeded = makeSeedOrders();
+      writeOrders(seeded);
+      setOrders(seeded);
+    },
   };
   return api;
 }

@@ -10,14 +10,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GreetingCard } from "./GreetingCard";
-import { ADDONS, RIBBONS, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Product } from "@/lib/data";
+import { ADDONS, RIBBONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const MAX = 200;
 
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
-  const { addToCart, setCartOpen, city, settings, user } = useStore();
+  const { addToCart, setCartOpen, city, settings, user, recordOrder, orders } = useStore();
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("");
@@ -43,6 +43,22 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     toast.success("Ditambahkan ke keranjang");
     onOpenChange(false);
     setCartOpen(true);
+  };
+
+  const instantOrder = () => {
+    const subtotal = total;
+    const shipping = SHIPPING_FEE[city] ?? 30000;
+    const order: Order = {
+      id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+      customerName: user?.name ?? from ?? "Pelanggan", customerEmail: user?.email ?? "guest@kalandra.id",
+      phone: user?.phone ?? "-", city, address: user?.address || "-",
+      items: [{ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom }],
+      subtotal, shipping, total: subtotal + shipping,
+      status: "Menunggu Pembayaran", createdAt: new Date().toISOString(), deliveryDate: custom.deliveryDate,
+    };
+    recordOrder(order);
+    toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
+    window.open(waLink(settings.whatsappNumber, buildWaMessage(product, custom, city)), "_blank", "noreferrer");
   };
 
   return (
@@ -106,8 +122,8 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
             <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total ({qty}x)</span><span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span></div>
               <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}><ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang</Button>
-              <Button asChild variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success">
-                <a href={waLink(settings.whatsappNumber, buildWaMessage(product, custom, city))} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung</a>
+              <Button variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={instantOrder}>
+                <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
               </Button>
               {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
             </div>
