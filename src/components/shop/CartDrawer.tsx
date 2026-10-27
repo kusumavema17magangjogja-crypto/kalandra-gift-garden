@@ -1,4 +1,5 @@
 import { Minus, Plus, Trash2, ShoppingBag, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
