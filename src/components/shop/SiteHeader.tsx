@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Gift, Leaf, Search, ShoppingBag, User as UserIcon, MessageCircle, PackageSearch, ShieldCheck, LogOut, Menu, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useStore } from "@/lib/store";
 import { CITIES, formatDate, formatIDR, waLink } from "@/lib/data";
 import { StatusBadge } from "./StatusBadge";
+import { PasswordInput } from "./AuthDialog";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const NAV = [
@@ -35,6 +38,37 @@ function TrackDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
             <p className="text-muted-foreground">Kirim {formatDate(found.deliveryDate)} · {found.city} · {formatIDR(found.total)}</p>
           </div>
         ) : <p className="text-sm text-muted-foreground">Pesanan tidak ditemukan.</p>)}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AdminLoginDialog() {
+  const { adminOpen, setAdminOpen, loginAdmin } = useStore();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = loginAdmin(email, pw);
+    if (err) return void toast.error(err);
+    toast.success("Selamat datang, Admin Kalandra!");
+    setAdminOpen(false);
+    setEmail(""); setPw("");
+    navigate({ to: "/admin" });
+  };
+  return (
+    <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+      <DialogContent className="max-w-sm">
+        <form onSubmit={submit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-serif text-3xl text-primary"><ShieldCheck className="h-7 w-7" />Portal Admin</DialogTitle>
+            <DialogDescription>Area khusus pengelola toko Kalandra.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5"><Label htmlFor="ae">Email Admin</Label><Input id="ae" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="ap">Password</Label><PasswordInput id="ap" value={pw} onChange={setPw} /></div>
+          <Button type="submit" className="w-full" size="lg">Masuk sebagai Admin</Button>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -104,7 +138,10 @@ export function SiteHeader() {
             )}
           </div>
            <TooltipProvider delayDuration={250}><div className="ml-auto flex shrink-0 items-center gap-0 sm:gap-1 md:ml-0">
-             <Tooltip><TooltipTrigger asChild><Button asChild variant="ghost" size="icon" className="text-muted-foreground" aria-label="Portal Admin"><Link to="/admin"><ShieldCheck className="h-[18px] w-[18px]" /></Link></Button></TooltipTrigger><TooltipContent>Portal Admin</TooltipContent></Tooltip>
+             <Tooltip><TooltipTrigger asChild>{s.isAdmin
+               ? <Button asChild variant="ghost" size="icon" className="text-muted-foreground" aria-label="Portal Admin"><Link to="/admin"><ShieldCheck className="h-[18px] w-[18px]" /></Link></Button>
+               : <Button variant="ghost" size="icon" className="text-muted-foreground" aria-label="Portal Admin" onClick={() => s.setAdminOpen(true)}><ShieldCheck className="h-[18px] w-[18px]" /></Button>
+             }</TooltipTrigger><TooltipContent>Portal Admin</TooltipContent></Tooltip>
             {s.user ? (
               <DropdownMenu>
                  <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Akun"><UserIcon className="h-5 w-5" /></Button></DropdownMenuTrigger></TooltipTrigger><TooltipContent>Akun</TooltipContent></Tooltip>
@@ -125,6 +162,7 @@ export function SiteHeader() {
         </div>
       </div>
       <TrackDialog open={track} onOpenChange={setTrack} />
+      <AdminLoginDialog />
     </header>
   );
 }
@@ -139,7 +177,7 @@ export function SiteFooter() {
         <div className="text-sm text-primary-foreground/80"><p className="font-semibold text-primary-foreground">Jam Operasional</p><p className="mt-2">{settings.operatingHours}</p></div>
       </div>
       <div className="mx-auto flex max-w-7xl flex-wrap gap-5 px-4 pb-8 text-sm"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin bertanya.`)} target="_blank" rel="noreferrer">WhatsApp</a><a href={settings.instagramUrl} target="_blank" rel="noreferrer">Instagram</a><a href={settings.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a></div>
-      <p className="border-t border-primary-foreground/10 py-4 text-center text-xs text-primary-foreground/60">© 2026 {settings.storeName}. All rights reserved.</p>
+      <p className="border-t border-primary-foreground/10 py-4 text-center text-xs text-primary-foreground/60">© 2026 {settings.storeName}. All rights reserved. · <Link to="/admin" className="hover:underline">Portal Admin</Link></p>
     </footer>
   );
 }
