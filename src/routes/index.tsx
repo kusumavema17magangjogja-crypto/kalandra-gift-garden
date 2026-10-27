@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Star, Check, MessageCircle, Camera, Package, Palette, Hammer, HandHeart } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SiteHeader, SiteFooter } from "@/components/shop/SiteHeader";
 import { CustomizeDialog } from "@/components/shop/CustomizeDialog";
 import { useStore } from "@/lib/store";
-import { CATEGORY_EMOJI, IMAGES, formatIDR, waLink, type Category, type Product, type ProductTag } from "@/lib/data";
+import { CATEGORY_EMOJI, IMAGES, SHIPPING_FEE, formatIDR, waLink, type Category, type Order, type Product, type ProductTag } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -47,8 +48,22 @@ const REVIEWS = [
 ];
 
 function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
-  const { settings } = useStore();
+  const { settings, recordOrder, user, city, orders } = useStore();
   const limited = p.stock <= 5;
+  const quickOrder = () => {
+    const shipping = SHIPPING_FEE[city] ?? 30000;
+    const item = { key: crypto.randomUUID(), productId: p.id, name: p.name, image: p.image, basePrice: p.price, qty: 1, to: "", from: user?.name.split(" ")[0] ?? "", message: "", ribbon: "emerald", deliveryDate: new Date(Date.now() + 864e5).toISOString(), addons: [] };
+    const order: Order = {
+      id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+      customerName: user?.name ?? "Pelanggan", customerEmail: user?.email ?? "guest@kalandra.id",
+      phone: user?.phone ?? "-", city, address: user?.address || "-",
+      items: [item], subtotal: p.price, shipping, total: p.price + shipping,
+      status: "Menunggu Pembayaran", createdAt: new Date().toISOString(), deliveryDate: item.deliveryDate,
+    };
+    recordOrder(order);
+    toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
+    window.open(waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin memesan ${p.name} (${formatIDR(p.price)}).`), "_blank", "noreferrer");
+  };
   const badge = p.badge ?? (p.tags.includes("express") ? "Same-Day" : limited ? "Slot Terbatas" : "Ready Stock");
   return (
     <article className="group overflow-hidden rounded-2xl border bg-card shadow-soft transition hover:-translate-y-1 hover:shadow-lift">
@@ -64,7 +79,7 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
         <p className="line-clamp-2 text-sm text-muted-foreground">{p.description}</p>
         <p className="text-lg font-semibold">{formatIDR(p.price)}</p>
         <Button className="w-full" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>
-        {p.stock > 0 && <Button asChild variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin memesan ${p.name} (${formatIDR(p.price)}).`)} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />Order WA</a></Button>}
+        {p.stock > 0 && <Button variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={quickOrder}><MessageCircle className="mr-2 h-4 w-4" />Order WA</Button>}
       </div>
     </article>
   );
