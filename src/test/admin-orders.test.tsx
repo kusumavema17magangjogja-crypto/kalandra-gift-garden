@@ -15,7 +15,7 @@ function Probe() {
     <button onClick={() => s.login("sari@email.com", "kalandra123")}>Login Sari</button>
     <button onClick={() => s.login("admin@kalandra.id", "admin123")}>Login Admin</button>
     <button onClick={() => s.logout()}>Logout</button>
-    <button onClick={() => s.setOrderStatus(s.orders[0].id, "Sedang Dirangkai")}>Advance Status</button>
+    <button onClick={() => s.setOrderStatus(s.orders[0]!.id, "Sedang Dirangkai")}>Advance Status</button>
   </>;
 }
 
@@ -54,7 +54,7 @@ describe("Central orders list", () => {
     expect(first).toMatch(/^KLD-24051:/);
     fireEvent.click(screen.getByText("Advance Status"));
     const saved = JSON.parse(localStorage.getItem(ORDERS_KEY) ?? "[]") as Order[];
-    expect(saved[0].status).toBe("Sedang Dirangkai");
+    expect(saved[0]?.status).toBe("Sedang Dirangkai");
     expect(screen.getByTestId("orders").textContent).toContain("Sedang Dirangkai");
   });
 
