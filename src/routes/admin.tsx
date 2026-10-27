@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3, Package, Tag, Users, Settings, Bell, Store, ChevronLeft, Menu, TrendingUp, TrendingDown,
@@ -49,7 +49,17 @@ function Admin() {
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const { orders, settings } = useStore();
+  const { orders, settings, isAdmin } = useStore();
+  const [denied, setDenied] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin && !denied) {
+      setDenied(true);
+      toast.error("Akses Ditolak: Halaman khusus Admin Kalandra.");
+    }
+  }, [isAdmin, denied]);
+
+  if (!isAdmin) return <Navigate to="/" />;
   const unread = orders.filter((o) => o.status === "Menunggu Pembayaran").length;
 
   const Nav = ({ compact }: { compact?: boolean }) => (

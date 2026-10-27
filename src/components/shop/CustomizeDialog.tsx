@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GreetingCard } from "./GreetingCard";
-import { ADDONS, RIBBONS, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Product } from "@/lib/data";
+import { ADDONS, RIBBONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
