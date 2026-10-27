@@ -51,7 +51,7 @@ describe("Central orders list", () => {
   it("persists status changes to kalandra_orders so the storefront reads them back", () => {
     render(<StoreProvider><Probe /></StoreProvider>);
     const first = (JSON.parse(screen.getByTestId("orders").textContent ?? "[]") as string[])[0];
-    expect(first).toContain("Menunggu Pembayaran").catch?.(() => {});
+    expect(first).toMatch(/^KLD-24051:/);
     fireEvent.click(screen.getByText("Advance Status"));
     const saved = JSON.parse(localStorage.getItem(ORDERS_KEY) ?? "[]") as Order[];
     expect(saved[0].status).toBe("Sedang Dirangkai");
