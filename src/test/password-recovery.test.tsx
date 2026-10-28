@@ -40,7 +40,7 @@ describe("Simulated password recovery", () => {
     const state = JSON.parse(localStorage.getItem("kalandra-state-v1") ?? "{}");
     expect(state.users.find((u: { email: string }) => u.email === "sari@email.com").password).toBe("abcdef");
     fireEvent.change(screen.getByLabelText("Password", { exact: true }), { target: { value: "abcdef" } });
-    fireEvent.click(screen.getByRole("button", { name: "Masuk", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Masuk$/ }));
     expect(screen.getByTestId("result").textContent).toBe("sari@email.com");
   });
 });
