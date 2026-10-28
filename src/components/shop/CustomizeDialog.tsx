@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const MAX = 200;
 
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
-  const { addToCart, setCartOpen, city, settings, user, recordOrder, orders } = useStore();
+  const { addToCart, setCartOpen, city, settings, user, recordOrder, isAdmin } = useStore();
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("");
@@ -38,18 +38,22 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const custom = { to, from, message, ribbon, deliveryDate: date?.toISOString() ?? "", addons, qty };
 
   const add = () => {
+    if (isAdmin) return;
     if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
-    addToCart({ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom });
+    const error = addToCart({ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom });
+    if (error) return void toast.error(error);
     toast.success("Ditambahkan ke keranjang");
     onOpenChange(false);
     setCartOpen(true);
   };
 
   const instantOrder = () => {
+    if (isAdmin) return;
+    if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
     const subtotal = total;
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const order: Order = {
-      id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+      id: "KLD-" + crypto.randomUUID(),
       customerName: user?.name ?? from ?? "Pelanggan", customerEmail: user?.email ?? "guest@kalandra.id",
       phone: user?.phone ?? "-", city, address: user?.address || "-",
       items: [{ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom }],
@@ -119,14 +123,14 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
           <div className="flex flex-col gap-5 bg-secondary p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pratinjau Kartu Ucapan</p>
             <GreetingCard to={to} from={from} message={message} ribbon={ribbon} />
-            <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
+            {!isAdmin && <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total ({qty}x)</span><span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span></div>
               <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}><ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang</Button>
               <Button variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={instantOrder}>
                 <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
               </Button>
               {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
-            </div>
+            </div>}
           </div>
         </div>
       </DialogContent>

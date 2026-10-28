@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StoreProvider, useStore, ORDERS_KEY } from "@/lib/store";
 import type { CartItem, Order } from "@/lib/data";
 
@@ -15,13 +15,29 @@ function Probe() {
     <button onClick={() => s.login("sari@email.com", "kalandra123")}>Login Sari</button>
     <button onClick={() => s.login("admin@kalandra.id", "admin123")}>Login Admin</button>
     <button onClick={() => s.logout()}>Logout</button>
-    <button onClick={() => s.setOrderStatus(s.orders[0]!.id, "Sedang Dirangkai")}>Advance Status</button>
+    <button onClick={() => { const first = s.orders[0]; if (first) s.setOrderStatus(first.id, "Sedang Dirangkai"); }}>Advance Status</button>
+    <button onClick={() => s.loginAdmin("sari@email.com", "kalandra123")}>Reject Sari</button>
   </>;
 }
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); vi.restoreAllMocks(); });
 
 describe("Cart isolation", () => {
+  it("never overwrites an existing customer cart during an owner switch", () => {
+    localStorage.setItem("kalandra-cart-sari@email.com", JSON.stringify([{ ...item, key: "existing-customer" }]));
+    render(<StoreProvider><Probe /></StoreProvider>);
+    fireEvent.click(screen.getByText("Add"));
+    fireEvent.click(screen.getByText("Login Sari"));
+    expect(screen.getByTestId("cart").textContent).toBe('["existing-customer"]');
+    expect(JSON.parse(localStorage.getItem("kalandra-cart-sari@email.com") ?? "[]")[0].key).toBe("existing-customer");
+  });
+
+  it("preserves a customer session when admin login rejects its role", () => {
+    render(<StoreProvider><Probe /></StoreProvider>);
+    fireEvent.click(screen.getByText("Login Sari"));
+    fireEvent.click(screen.getByText("Reject Sari"));
+    expect(screen.getByTestId("who").textContent).toBe("sari@email.com:customer");
+  });
   it("keeps guest and customer carts in separate storage keys", () => {
     render(<StoreProvider><Probe /></StoreProvider>);
     fireEvent.click(screen.getByText("Add"));
@@ -48,6 +64,17 @@ describe("Cart isolation", () => {
 });
 
 describe("Central orders list", () => {
+  it("reads external order writes and preserves them during a status update", () => {
+    render(<StoreProvider><Probe /></StoreProvider>);
+    const saved = JSON.parse(localStorage.getItem(ORDERS_KEY) ?? "[]") as Order[];
+    const first = saved[0];
+    if (!first) throw new Error("Missing seeded order");
+    localStorage.setItem(ORDERS_KEY, JSON.stringify([...saved, { ...first, id: "KLD-external", status: "Menunggu Pembayaran" }]));
+    fireEvent(window, new StorageEvent("storage", { key: ORDERS_KEY }));
+    expect(screen.getByTestId("orders").textContent).toContain("KLD-external:Menunggu Pembayaran");
+    fireEvent.click(screen.getByText("Advance Status"));
+    expect(JSON.parse(localStorage.getItem(ORDERS_KEY) ?? "[]").at(-1).id).toBe("KLD-external");
+  });
   it("persists status changes to kalandra_orders so the storefront reads them back", () => {
     render(<StoreProvider><Probe /></StoreProvider>);
     const first = (JSON.parse(screen.getByTestId("orders").textContent ?? "[]") as string[])[0];
