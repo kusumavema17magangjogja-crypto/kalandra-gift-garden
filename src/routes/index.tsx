@@ -48,13 +48,14 @@ const REVIEWS = [
 ];
 
 function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
-  const { settings, recordOrder, user, city, orders } = useStore();
+  const { settings, recordOrder, user, city, isAdmin } = useStore();
   const limited = p.stock <= 5;
   const quickOrder = () => {
+    if (isAdmin) return;
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const item = { key: crypto.randomUUID(), productId: p.id, name: p.name, image: p.image, basePrice: p.price, qty: 1, to: "", from: user?.name.split(" ")[0] ?? "", message: "", ribbon: "emerald", deliveryDate: new Date(Date.now() + 864e5).toISOString(), addons: [] };
     const order: Order = {
-      id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+      id: "KLD-" + crypto.randomUUID(),
       customerName: user?.name ?? "Pelanggan", customerEmail: user?.email ?? "guest@kalandra.id",
       phone: user?.phone ?? "-", city, address: user?.address || "-",
       items: [item], subtotal: p.price, shipping, total: p.price + shipping,
@@ -78,8 +79,8 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
         <h3 className="font-serif text-xl leading-tight text-primary">{p.name}</h3>
         <p className="line-clamp-2 text-sm text-muted-foreground">{p.description}</p>
         <p className="text-lg font-semibold">{formatIDR(p.price)}</p>
-        <Button className="w-full" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>
-        {p.stock > 0 && <Button variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={quickOrder}><MessageCircle className="mr-2 h-4 w-4" />Order WA</Button>}
+        {!isAdmin && <Button className="w-full" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>}
+        {!isAdmin && p.stock > 0 && <Button variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={quickOrder}><MessageCircle className="mr-2 h-4 w-4" />Order WA</Button>}
       </div>
     </article>
   );
