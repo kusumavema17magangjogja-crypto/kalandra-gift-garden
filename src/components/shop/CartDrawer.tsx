@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
   const s = useStore();
+  if (s.isAdmin) return null;
   return (
     <Sheet open={s.cartOpen} onOpenChange={s.setCartOpen}>
       <SheetContent className="flex w-full flex-col sm:max-w-md">
@@ -50,7 +51,8 @@ export function CartDrawer() {
             <Button className="w-full" size="lg" onClick={() => {
               const message = buildCartWaMessage(s.cart, s.city, s.shippingFee);
               const order = s.checkout();
-              if (order) toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
+              if (!order) return;
+              toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
               window.open(waLink(s.settings.whatsappNumber, message), "_blank", "noreferrer");
             }}><MessageCircle className="mr-2 h-4 w-4" />Checkout via WhatsApp</Button>
           </div>
