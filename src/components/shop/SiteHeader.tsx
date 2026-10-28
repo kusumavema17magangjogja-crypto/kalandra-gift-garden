@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useStore } from "@/lib/store";
 import { CITIES, formatDate, formatIDR, waLink } from "@/lib/data";
 import { StatusBadge } from "./StatusBadge";
-import { PasswordInput } from "./AuthDialog";
+import { PasswordInput, Forgot } from "./AuthDialog";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -48,6 +48,7 @@ function AdminLoginDialog() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [recover, setRecover] = useState(false);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const err = loginAdmin(email, pw);
@@ -58,17 +59,18 @@ function AdminLoginDialog() {
     navigate({ to: "/admin" });
   };
   return (
-    <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+    <Dialog open={adminOpen} onOpenChange={(open) => { setAdminOpen(open); if (!open) setRecover(false); }}>
       <DialogContent className="max-w-sm">
-        <form onSubmit={submit} className="space-y-4">
+        {recover ? <Forgot onBack={() => setRecover(false)} onComplete={(value) => { setEmail(value); setPw(""); setRecover(false); }} /> : <form onSubmit={submit} className="space-y-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-serif text-3xl text-primary"><ShieldCheck className="h-7 w-7" />Portal Admin</DialogTitle>
             <DialogDescription>Area khusus pengelola toko Kalandra.</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5"><Label htmlFor="ae">Email Admin</Label><Input id="ae" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="space-y-1.5"><Label htmlFor="ap">Password</Label><PasswordInput id="ap" value={pw} onChange={setPw} /></div>
+          <Button type="button" variant="link" onClick={() => setRecover(true)}>Lupa Password?</Button>
           <Button type="submit" className="w-full" size="lg">Masuk sebagai Admin</Button>
-        </form>
+        </form>}
       </DialogContent>
     </Dialog>
   );
@@ -154,10 +156,10 @@ export function SiteHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
              ) : <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label="Akun" onClick={() => s.setAuthOpen("login")}><UserIcon className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent>Akun</TooltipContent></Tooltip>}
-            <Button variant="ghost" size="icon" className="relative" onClick={() => s.setCartOpen(true)} aria-label="Keranjang">
+            {!s.isAdmin && <Button variant="ghost" size="icon" className="relative" onClick={() => s.setCartOpen(true)} aria-label="Keranjang">
               <ShoppingBag />
               {s.cartCount > 0 && <span key={s.cartCount} className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 animate-pop place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{s.cartCount}</span>}
-            </Button>
+            </Button>}
            </div></TooltipProvider>
         </div>
       </div>
@@ -168,7 +170,8 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const { settings } = useStore();
+  const { settings, isAdmin, setAdminOpen } = useStore();
+  const navigate = useNavigate();
   return (
     <footer className="mt-20 bg-primary text-primary-foreground">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3">
@@ -177,7 +180,7 @@ export function SiteFooter() {
         <div className="text-sm text-primary-foreground/80"><p className="font-semibold text-primary-foreground">Jam Operasional</p><p className="mt-2">{settings.operatingHours}</p></div>
       </div>
       <div className="mx-auto flex max-w-7xl flex-wrap gap-5 px-4 pb-8 text-sm"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin bertanya.`)} target="_blank" rel="noreferrer">WhatsApp</a><a href={settings.instagramUrl} target="_blank" rel="noreferrer">Instagram</a><a href={settings.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a></div>
-      <p className="border-t border-primary-foreground/10 py-4 text-center text-xs text-primary-foreground/60">© 2026 {settings.storeName}. All rights reserved. · <Link to="/admin" className="hover:underline">Portal Admin</Link></p>
+      <p className="border-t border-primary-foreground/10 py-4 text-center text-xs text-primary-foreground/60">© 2026 {settings.storeName}. All rights reserved. · <Button variant="link" className="h-auto p-0 text-inherit" onClick={() => isAdmin ? navigate({ to: "/admin" }) : setAdminOpen(true)}>Portal Admin</Button></p>
     </footer>
   );
 }

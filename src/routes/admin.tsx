@@ -49,16 +49,17 @@ function Admin() {
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const { orders, settings, isAdmin } = useStore();
+  const { orders, settings, isAdmin, loaded } = useStore();
   const [denied, setDenied] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin && !denied) {
+    if (loaded && !isAdmin && !denied) {
       setDenied(true);
       toast.error("Akses Ditolak: Halaman khusus Admin Kalandra.");
     }
-  }, [isAdmin, denied]);
+  }, [isAdmin, denied, loaded]);
 
+  if (!loaded) return null;
   if (!isAdmin) return <Navigate to="/" />;
   const unread = orders.filter((o) => o.status === "Menunggu Pembayaran").length;
 

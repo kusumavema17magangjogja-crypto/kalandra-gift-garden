@@ -52,6 +52,7 @@ export const ORDERS_KEY = "kalandra_orders";
 const CART_PREFIX = "kalandra-cart-";
 const GUEST_KEY = "kalandra-guest-id";
 const ORDERS_EVENT = "kalandra:orders";
+const SESSION_KEY = "kalandra-session-email";
 
 // ---------- Orders: central list shared by storefront & admin ----------
 
@@ -99,12 +100,13 @@ function writeCart(owner: string | null, cart: CartItem[]) {
 function useStoreValue() {
   const [s, setS] = useState<State>(makeInitial);
   const [orders, setOrders] = useState<Order[]>(makeSeedOrders);
-  const [cartOwner, setCartOwner] = useState<string | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [guestOwner, setGuestOwner] = useState<string | null>(null);
+  const [cartState, setCartState] = useState<{ owner: string | null; items: CartItem[] }>({ owner: null, items: [] });
   const [loaded, setLoaded] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState<null | "login" | "register" | "forgot">(null);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
 
   useEffect(() => {
     try {
@@ -113,7 +115,7 @@ function useStoreValue() {
         const saved = JSON.parse(raw);
         const defaults = makeInitial();
         const settings = saved.settings ?? {};
-        setS({ ...defaults, ...saved,
+        setS({ ...defaults, ...saved, currentEmail: sessionStorage.getItem(SESSION_KEY),
           categories: [...new Set([...(saved.categories ?? CATEGORIES), ...(saved.products ?? []).map((p: Product) => p.category)])] as string[],
           settings: { ...DEFAULT_SETTINGS, ...settings,
             whatsappNumber: settings.whatsappNumber ?? settings.waNumber ?? DEFAULT_SETTINGS.whatsappNumber,
@@ -121,36 +123,56 @@ function useStoreValue() {
           },
         });
       }
+      setGuestOwner(guestId());
       setOrders(readOrders());
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
-    if (loaded) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} }
+    if (loaded) { try {
+      localStorage.setItem(KEY, JSON.stringify({ ...s, currentEmail: null }));
+      if (s.currentEmail) sessionStorage.setItem(SESSION_KEY, s.currentEmail);
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch {} }
   }, [s, loaded]);
 
   // Keep orders in sync with other tabs / admin writes.
   useEffect(() => {
     const sync = () => setOrders(readOrders());
+    const storageSync = (event: StorageEvent) => {
+      if (event.key === ORDERS_KEY || event.key === null) sync();
+      if (event.key?.startsWith(CART_PREFIX)) {
+        setCartState((prev) => event.key === cartKeyFor(prev.owner) ? { ...prev, items: readCart(prev.owner) } : prev);
+      }
+    };
     window.addEventListener(ORDERS_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => { window.removeEventListener(ORDERS_EVENT, sync); window.removeEventListener("storage", sync); };
+    window.addEventListener("storage", storageSync);
+    return () => { window.removeEventListener(ORDERS_EVENT, sync); window.removeEventListener("storage", storageSync); };
   }, []);
 
   const user = s.users.find((u) => u.email === s.currentEmail) ?? null;
   const isAdmin = user?.role === "admin";
+  const cartOwner = loaded ? (user ? (isAdmin ? null : user.email) : guestOwner) : null;
+  const cart = cartOwner && cartState.owner === cartOwner ? cartState.items : [];
 
   // Cart owner: admin has none; customers use their email; guests use a session id.
   useEffect(() => {
-    const owner = user ? (user.role === "admin" ? null : user.email) : guestId();
-    setCartOwner(owner);
-    setCart(readCart(owner));
-  }, [user?.email, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (cartOwner !== null || cart.length === 0) writeCart(cartOwner, cart);
-  }, [cart, cartOwner]);
+    setCartState({ owner: cartOwner, items: readCart(cartOwner) });
+    setCartOpen(false);
+  }, [cartOwner]);
 
-  const mutateOrders = (fn: (prev: Order[]) => Order[]) => setOrders((prev) => { const next = fn(prev); writeOrders(next); return next; });
+  const mutateCart = (fn: (items: CartItem[]) => CartItem[]) => {
+    if (!cartOwner || isAdmin) return;
+    const items = fn(readCart(cartOwner));
+    writeCart(cartOwner, items);
+    setCartState({ owner: cartOwner, items });
+  };
+
+  const mutateOrders = (fn: (prev: Order[]) => Order[]) => {
+    const next = fn(readOrders());
+    writeOrders(next);
+    setOrders(next);
+  };
 
   const recordOrder = (order: Order) => {
     mutateOrders((prev) => [order, ...prev]);
@@ -161,9 +183,11 @@ function useStoreValue() {
     ...s,
     user,
     isAdmin,
+    loaded,
     orders,
     cart,
     cartOpen, setCartOpen, authOpen, setAuthOpen, adminOpen, setAdminOpen,
+    loginEmail, setLoginEmail,
     setCity: (city: string) => setS((p) => ({ ...p, city })),
     shippingFee: SHIPPING_FEE[s.city] ?? 30000,
     cartSubtotal: cart.reduce((t, i) => t + itemTotal(i), 0),
@@ -176,10 +200,10 @@ function useStoreValue() {
       return null;
     },
     loginAdmin(email: string, password: string) {
-      const err = api.login(email, password);
-      if (err) return err;
       const u = s.users.find((x) => x.email.toLowerCase() === email.toLowerCase());
-      if (u?.role !== "admin") { setS((p) => ({ ...p, currentEmail: null })); return "Akun ini bukan admin Kalandra"; }
+      if (!u || u.password !== password) return "Email atau password salah";
+      if (u.role !== "admin") return "Akun ini bukan admin Kalandra";
+      setS((p) => ({ ...p, currentEmail: u.email }));
       return null;
     },
     register(u: Omit<User, "role" | "address" | "city">) {
@@ -189,8 +213,12 @@ function useStoreValue() {
     },
     logout: () => setS((p) => ({ ...p, currentEmail: null })),
     userExists: (email: string) => s.users.some((x) => x.email.toLowerCase() === email.toLowerCase()),
-    resetPassword(email: string, password: string) {
+    resetPassword(email: string, password: string, otp: string) {
+      if (otp !== "1234") return "Kode OTP salah";
+      if (password.length < 6) return "Password minimal 6 karakter";
+      if (!api.userExists(email)) return "Email tidak terdaftar";
       setS((p) => ({ ...p, users: p.users.map((u) => (u.email.toLowerCase() === email.toLowerCase() ? { ...u, password } : u)) }));
+      return null;
     },
     updateProfile(patch: Partial<User>) {
       setS((p) => ({ ...p, users: p.users.map((u) => (u.email === p.currentEmail ? { ...u, ...patch } : u)), currentEmail: patch.email ?? p.currentEmail }));
@@ -198,12 +226,12 @@ function useStoreValue() {
 
     addToCart(item: CartItem) {
       if (isAdmin) return "Admin tidak memiliki keranjang belanja";
-      setCart((p) => [...p, item]);
+      mutateCart((p) => [...p, item]);
       return null;
     },
     updateQty: (key: string, qty: number) =>
-      setCart((p) => p.map((i) => (i.key === key ? { ...i, qty: Math.max(1, qty) } : i))),
-    removeFromCart: (key: string) => setCart((p) => p.filter((i) => i.key !== key)),
+      mutateCart((p) => p.map((i) => (i.key === key ? { ...i, qty: Math.max(1, qty) } : i))),
+    removeFromCart: (key: string) => mutateCart((p) => p.filter((i) => i.key !== key)),
 
     checkout(): Order | null {
       const firstItem = cart[0];
@@ -211,7 +239,7 @@ function useStoreValue() {
       const subtotal = cart.reduce((t, i) => t + itemTotal(i), 0);
       const shipping = SHIPPING_FEE[s.city] ?? 30000;
       const order: Order = {
-        id: "KLD-" + (24052 + orders.length + Math.floor(Math.random() * 9)),
+        id: "KLD-" + crypto.randomUUID(),
         customerName: user?.name ?? firstItem.from ?? "Pelanggan",
         customerEmail: user?.email ?? "guest@kalandra.id",
         phone: user?.phone ?? "-", city: s.city,
@@ -220,7 +248,7 @@ function useStoreValue() {
         deliveryDate: firstItem.deliveryDate,
       };
       recordOrder(order);
-      setCart([]);
+      mutateCart(() => []);
       setS((p) => ({
         ...p,
         products: p.products.map((pr) => {

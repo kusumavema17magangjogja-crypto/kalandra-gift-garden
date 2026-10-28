@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,9 +36,9 @@ export function PasswordInput({ value, onChange, id, placeholder }: { value: str
   return (
     <div className="relative">
       <Input id={id} type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="pr-10" />
-      <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan password" : "Tampilkan password"} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+      <Button variant="ghost" size="icon" type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan password" : "Tampilkan password"} className="absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground">
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -57,8 +57,8 @@ export function AuthDialog() {
 }
 
 function Login() {
-  const { login, setAuthOpen } = useStore();
-  const [email, setEmail] = useState("");
+  const { login, setAuthOpen, loginEmail } = useStore();
+  const [email, setEmail] = useState(loginEmail);
   const [pw, setPw] = useState("");
   const [remember, setRemember] = useState(true);
   const submit = (e: React.FormEvent) => {
@@ -126,15 +126,14 @@ function Register() {
   );
 }
 
-function Forgot() {
-  const { userExists, resetPassword, setAuthOpen } = useStore();
+export function Forgot({ onComplete, onBack }: { onComplete?: (email: string) => void; onBack?: () => void }) {
+  const { userExists, resetPassword, setAuthOpen, setLoginEmail } = useStore();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(60);
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (step !== 2 || timer <= 0) return;
@@ -144,57 +143,42 @@ function Forgot() {
 
   const request = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userExists(email)) return void toast.error("Email tidak terdaftar");
-    toast.success("Kode OTP dikirim (demo: 1234)");
-    setStep(2); setTimer(60);
+    if (!userExists(email.trim())) return void toast.error("Email tidak terdaftar");
+    setEmail(email.trim());
+    toast.success("Kode verifikasi simulasi: 1234");
+    setOtp(""); setStep(2); setTimer(60);
   };
-  const verify = () => (otp === "1234" ? setStep(3) : toast.error("Kode OTP salah"));
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.length < 8) return void toast.error("Password minimal 8 karakter");
-    if (pw !== confirm) return void toast.error("Konfirmasi tidak cocok");
-    resetPassword(email, pw); setDone(true);
+    if (pw !== confirm) return void toast.error("Konfirmasi password tidak cocok");
+    const error = resetPassword(email, pw, otp);
+    if (error) return void toast.error(error);
+    toast.success("Password berhasil diperbarui! Silakan masuk kembali.");
+    if (onComplete) onComplete(email);
+    else { setLoginEmail(email); setAuthOpen("login"); }
   };
 
   return (
     <div className="space-y-4">
-      <DialogHeader><DialogTitle className="font-serif text-3xl text-primary">Reset Password</DialogTitle><DialogDescription>Langkah {step} dari 3</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle className="font-serif text-3xl text-primary">Reset Password</DialogTitle><DialogDescription>Langkah {step} dari 3 · Verifikasi simulasi</DialogDescription></DialogHeader>
       <div className="flex gap-2">{[1, 2, 3].map((i) => <div key={i} className={cn("h-1 flex-1 rounded-full", i <= step ? "bg-primary" : "bg-muted")} />)}</div>
-      {step === 1 && (
-        <form onSubmit={request} className="space-y-4">
-          <div className="space-y-1.5"><Label>Email terdaftar</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <Button type="submit" className="w-full">Kirim Kode OTP</Button>
-        </form>
-      )}
-      {step === 2 && (
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">Masukkan 4 digit kode yang dikirim ke {email}</p>
-          <div className="flex justify-center">
-            <InputOTP maxLength={4} value={otp} onChange={setOtp}>
-              <InputOTPGroup>{[0, 1, 2, 3].map((i) => <InputOTPSlot key={i} index={i} className="h-12 w-12 text-lg" />)}</InputOTPGroup>
-            </InputOTP>
-          </div>
-          <p className="text-sm">{timer > 0 ? <span className="text-muted-foreground">Kirim ulang dalam 0:{String(timer).padStart(2, "0")}</span> :
-            <button className="font-semibold text-accent hover:underline" onClick={() => { setTimer(60); toast.success("OTP dikirim ulang (1234)"); }}>Kirim ulang kode</button>}</p>
-          <Button className="w-full" onClick={verify} disabled={otp.length < 4}>Verifikasi</Button>
-        </div>
-      )}
-      {step === 3 && !done && (
-        <form onSubmit={save} className="space-y-3">
-          <div className="space-y-1.5"><Label>Password baru</Label><PasswordInput value={pw} onChange={setPw} /></div>
-          <StrengthBar value={pw} />
-          <div className="space-y-1.5"><Label>Konfirmasi password</Label><PasswordInput value={confirm} onChange={setConfirm} />
-            {confirm && confirm !== pw && <p className="text-xs text-destructive">Tidak cocok</p>}</div>
-          <Button type="submit" className="w-full">Simpan Password</Button>
-        </form>
-      )}
-      {done && (
-        <div className="space-y-3 py-4 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-          <p className="font-semibold">Password berhasil diperbarui!</p>
-          <Button className="w-full" onClick={() => setAuthOpen("login")}>Masuk Sekarang</Button>
-        </div>
-      )}
+      {step === 1 && <form onSubmit={request} className="space-y-4">
+        <div className="space-y-1.5"><Label htmlFor="recovery-email">Email terdaftar</Label><Input id="recovery-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        <Button type="submit" className="w-full">Kirim Kode Verifikasi / OTP</Button>
+      </form>}
+      {step === 2 && <div className="space-y-4 text-center">
+        <p className="break-words text-sm text-muted-foreground">Verifikasi untuk {email} · Kode simulasi: 1234</p>
+        <div className="flex justify-center"><InputOTP aria-label="Kode OTP" maxLength={4} value={otp} onChange={setOtp}><InputOTPGroup>{[0, 1, 2, 3].map((i) => <InputOTPSlot key={i} index={i} className="h-12 w-12 text-lg" />)}</InputOTPGroup></InputOTP></div>
+        <Button variant="link" disabled={timer > 0} onClick={() => { setOtp(""); setTimer(60); toast.success("Kode verifikasi simulasi: 1234"); }}>{timer > 0 ? `Kirim Ulang Kode (${timer}s)` : "Kirim Ulang Kode"}</Button>
+        <Button className="w-full" onClick={() => otp === "1234" ? setStep(3) : toast.error("Kode OTP salah")} disabled={otp.length < 4}>Verifikasi OTP</Button>
+      </div>}
+      {step === 3 && <form onSubmit={save} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="recovery-password">Password Baru</Label><PasswordInput id="recovery-password" placeholder="Minimal 6 karakter" value={pw} onChange={setPw} /></div>
+        <StrengthBar value={pw} />
+        <div className="space-y-1.5"><Label htmlFor="recovery-confirm">Konfirmasi Password Baru</Label><PasswordInput id="recovery-confirm" value={confirm} onChange={setConfirm} /></div>
+        <Button type="submit" className="w-full">Simpan Password Baru</Button>
+      </form>}
+      <Button variant="link" className="w-full" onClick={() => onBack ? onBack() : setAuthOpen("login")}>Kembali ke Masuk</Button>
     </div>
   );
 }

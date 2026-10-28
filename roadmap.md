@@ -1,4 +1,8 @@
 # Storefront tasks
+- [x] Complete six-character password recovery with simulated OTP and return to login.
+- [x] Fix hydration-safe admin access and both portal entry points.
+- [x] Eliminate cart owner transition races and synchronize central orders safely.
+- [x] Verify recovery, role denial, cart isolation and order updates with tests and live browser.
 - [x] Persist store settings and categories with backward-compatible saved data.
 - [x] Admin settings, category management and product badge editing.
 - [x] Branding, hero, socials and WhatsApp buttons connected to settings.
