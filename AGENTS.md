@@ -18,3 +18,6 @@
 - `/admin` is guarded in the route component: non-admins are redirected to `/` with a denial toast, and the header ShieldCheck icon opens an admin-only login dialog instead of linking directly.
 - Store settings and category CRUD use the existing shared StoreProvider with hydrated localStorage persistence and nested legacy-settings migration; this browser-local architecture is explicitly requested and must not be presented as multi-user administration.
 - Seed orders are created lazily when initializing state, not during module evaluation, to keep imports safe for the deployed Worker runtime.
+
+- Keep product food classification explicit and default unknown products to no halal badge; content exclusions override a conflicting classification.
+- Apply versioned catalog migrations only during hydration, preserving existing images and customized data and never resurrecting deleted additions on later mounts.

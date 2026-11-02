@@ -20,8 +20,8 @@ afterEach(() => { cleanup(); localStorage.clear(); });
 describe("Dynamic store rules", () => {
   it("uses the requested default WhatsApp and store settings", () => {
     expect(DEFAULT_SETTINGS.whatsappNumber).toBe("6281234567890");
-    expect(DEFAULT_SETTINGS.storeName).toBe("Kalandra");
-    expect(DEFAULT_SETTINGS.storeTagline).toBe("Hampers & Seserahan");
+    expect(DEFAULT_SETTINGS.storeName).toBe("Kalandra Florist & Gift");
+    expect(DEFAULT_SETTINGS.storeTagline).toBe("Toko Karangan Bunga, Hand Bouquet, Parsel & Seserahan Terpercaya");
     expect(DEFAULT_SETTINGS.instagramUrl).toBe("https://instagram.com");
     expect(DEFAULT_SETTINGS.tiktokUrl).toBe("https://tiktok.com");
   });

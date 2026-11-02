@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Panel — Kalandra Hampers" },
+      { title: "Admin Panel — Kalandra Florist & Gift" },
       { name: "description", content: "Dashboard pengelolaan pesanan, produk, pelanggan, dan pengaturan toko Kalandra." },
-      { property: "og:title", content: "Admin Panel — Kalandra Hampers" },
-      { property: "og:description", content: "Dashboard admin Kalandra Hampers & Seserahan." },
+      { property: "og:title", content: "Admin Panel — Kalandra Florist & Gift" },
+      { property: "og:description", content: "Dashboard admin Kalandra Florist & Gift." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -296,6 +296,7 @@ function Products() {
               <div className="space-y-1.5"><Label>Kategori</Label>
                 <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist></div>
               <div className="space-y-1.5"><Label>Status Badge</Label><Select value={edit.badge ?? (edit.tags.includes("express") ? "Same-Day" : edit.stock <= 5 ? "Slot Terbatas" : "Ready Stock")} onValueChange={(v) => { if (v !== "Ready Stock" && v !== "Slot Terbatas" && v !== "Same-Day") return; setEdit({ ...edit, badge: v, tags: v === "Same-Day" ? [...new Set([...edit.tags, "express" as const])] : edit.tags.filter((t) => t !== "express") }); }}><SelectTrigger aria-label="Status Badge"><SelectValue /></SelectTrigger><SelectContent>{["Ready Stock", "Slot Terbatas", "Same-Day"].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-1.5"><Label>Klasifikasi Isi</Label><Select value={edit.foodStatus ?? "unverified"} onValueChange={(v) => { if (v === "halal" || v === "non-halal" || v === "non-food" || v === "unverified") setEdit({ ...edit, foodStatus: v === "unverified" ? undefined : v }); }}><SelectTrigger aria-label="Klasifikasi Isi"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unverified">Belum dikonfirmasi</SelectItem><SelectItem value="halal">Makanan & minuman halal</SelectItem><SelectItem value="non-halal">Non-halal / mengandung alkohol</SelectItem><SelectItem value="non-food">Non-makanan</SelectItem></SelectContent></Select></div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label htmlFor="product-price">Harga (Rp)</Label><Input id="product-price" type="number" value={edit.price || ""} onChange={(e) => setEdit({ ...edit, price: +e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Stok / Slot</Label><Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: +e.target.value })} /></div>

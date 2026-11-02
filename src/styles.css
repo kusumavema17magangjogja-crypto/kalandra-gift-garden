@@ -31,6 +31,7 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-halal-badge: var(--halal-badge);
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-border: var(--border);
@@ -77,6 +78,7 @@
   --destructive: oklch(0.55 0.2 27);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.55 0.11 155);
+  --halal-badge: oklch(0.4 0.11 155);
   --warning: oklch(0.72 0.13 75);
   --info: oklch(0.55 0.09 235);
   --border: oklch(0.9 0.014 70);
@@ -166,4 +168,16 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-kenburns, .petal { animation: none !important; }
   .petal { display: none; }
+}
+
+@keyframes notification-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track { animation: notification-scroll 32s linear infinite; }
+.notification-marquee:hover .marquee-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+  .notification-marquee { overflow-x: auto; }
+  .marquee-track > [aria-hidden] { display: none; }
 }

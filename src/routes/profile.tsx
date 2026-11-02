@@ -21,9 +21,9 @@ export const Route = createFileRoute("/profile")({
   validateSearch: (s: Record<string, unknown>): { tab?: Tab | undefined } => ({ tab: ["data", "password", "orders"].includes(s["tab"] as string) ? (s["tab"] as Tab) : undefined }),
   head: () => ({
     meta: [
-      { title: "Profil Saya — Kalandra Hampers" },
+      { title: "Profil Saya — Kalandra Florist & Gift" },
       { name: "description", content: "Kelola data diri, password, dan riwayat pesanan hampers Anda." },
-      { property: "og:title", content: "Profil Saya — Kalandra Hampers" },
+      { property: "og:title", content: "Profil Saya — Kalandra Florist & Gift" },
       { property: "og:description", content: "Kelola akun dan lacak pesanan Kalandra." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
