@@ -1,4 +1,7 @@
 # Storefront tasks
+- [ ] Rebrand identity and top marquee while preserving existing product images.
+- [ ] Add selective halal classification and complementary florist/food/wine products.
+- [ ] Verify catalog migration, hero animation, and desktop/mobile purchasing.
 - [x] Complete six-character password recovery with simulated OTP and return to login.
 - [x] Fix hydration-safe admin access and both portal entry points.
 - [x] Eliminate cart owner transition races and synchronize central orders safely.

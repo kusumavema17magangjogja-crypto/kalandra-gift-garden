@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const NAV = [
-  { label: "Koleksi Hampers", hash: "katalog" },
+  { label: "Florist & Gift", hash: "katalog" },
   { label: "Seserahan & Mahar", hash: "seserahan" },
   { label: "Parsel Hari Raya", hash: "katalog" },
   { label: "Galeri Bukti Jadi", hash: "galeri" },
@@ -90,6 +90,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40">
+      <div className="notification-marquee overflow-hidden bg-primary-soft py-2 text-xs text-primary-foreground" aria-label="✨ Free Personal Greeting Card & Pita Eksklusif • 🚚 Pengiriman Cepat 3 Jam Tiba • 📸 Difoto Sebelum Diantar • 🌸 Florist & Hampers Terlengkap"><div className="marquee-track flex w-max"><span className="shrink-0 px-8">✨ Free Personal Greeting Card & Pita Eksklusif • 🚚 Pengiriman Cepat 3 Jam Tiba • 📸 Difoto Sebelum Diantar • 🌸 Florist & Hampers Terlengkap</span><span aria-hidden="true" className="shrink-0 px-8">✨ Free Personal Greeting Card & Pita Eksklusif • 🚚 Pengiriman Cepat 3 Jam Tiba • 📸 Difoto Sebelum Diantar • 🌸 Florist & Hampers Terlengkap</span></div></div>
       <div className="bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 text-xs">
           <div className="hidden gap-6 lg:flex">
@@ -119,16 +120,16 @@ export function SiteHeader() {
                  </nav>
             </SheetContent>
           </Sheet>
-          <Link to="/" className="flex min-w-0 items-center gap-2">
+          <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 lg:max-w-64">
             <span className="relative grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground"><Gift className="h-5 w-5" /><Leaf className="absolute -right-1 -top-1 h-4 w-4 text-rose" /></span>
-            <span className="min-w-0 break-words leading-tight"><span className="block font-serif text-xl font-semibold text-primary">{s.settings.storeName}</span><span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{s.settings.storeTagline}</span></span>
+            <span className="min-w-0 break-words leading-tight"><span className="block font-serif text-xl font-semibold text-primary">{s.settings.storeName}</span><span className="block text-[10px] text-muted-foreground">{s.settings.storeTagline}</span></span>
           </Link>
-          <nav className="hidden flex-1 justify-center gap-6 text-sm font-medium lg:flex">
+          <nav className="hidden flex-1 justify-center gap-4 text-sm font-medium lg:flex">
             {NAV.map((n) => <button key={n.label} onClick={() => go(n.hash)} className="text-foreground/80 hover:text-accent">{n.label}</button>)}
           </nav>
           <div className="relative ml-auto hidden w-56 md:block lg:ml-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Cari hampers…" value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 150)} />
+            <Input className="pl-9" placeholder="Cari bunga & gift…" value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 150)} />
             {focus && q.length >= 2 && (
               <div className="absolute inset-x-0 top-11 z-50 overflow-hidden rounded-lg border bg-popover shadow-lift">
                 {results.length === 0 ? <p className="p-3 text-sm text-muted-foreground">Tidak ada hasil</p> : results.map((p) => (

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   makeSeedOrders, SEED_PRODUCTS, SEED_USERS, SHIPPING_FEE, CITIES, CATEGORIES, itemTotal,
-  IMAGES, type CartItem, type Order, type OrderStatus, type Product, type User,
+  IMAGES, migrateFloristCatalog, type CartItem, type Order, type OrderStatus, type Product, type User,
 } from "./data";
 
 export interface Settings {
@@ -20,6 +20,7 @@ export interface Settings {
 }
 
 interface State {
+  floristCatalogVersion: number;
   categories: string[];
   products: Product[];
   users: User[];
@@ -29,7 +30,7 @@ interface State {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  storeName: "Kalandra", storeTagline: "Hampers & Seserahan", whatsappNumber: "6281234567890",
+  storeName: "Kalandra Florist & Gift", storeTagline: "Toko Karangan Bunga, Hand Bouquet, Parsel & Seserahan Terpercaya", whatsappNumber: "6281234567890",
   instagramUrl: "https://instagram.com", tiktokUrl: "https://tiktok.com",
   heroHeadline: "Rangkaian Kasih & Keanggunan di Setiap Momen Berharga",
   heroSubheadline: "Dirangkai tangan, lengkap dengan kartu ucapan personal, dan dikirim fotonya sebelum sampai ke orang tersayang.",
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const makeInitial = (): State => ({
+  floristCatalogVersion: 1,
   categories: [...CATEGORIES],
   products: SEED_PRODUCTS,
   users: SEED_USERS,
@@ -115,9 +117,13 @@ function useStoreValue() {
         const saved = JSON.parse(raw);
         const defaults = makeInitial();
         const settings = saved.settings ?? {};
+        const products = migrateFloristCatalog(saved.products ?? SEED_PRODUCTS, saved.floristCatalogVersion ?? 0);
         setS({ ...defaults, ...saved, currentEmail: sessionStorage.getItem(SESSION_KEY),
-          categories: [...new Set([...(saved.categories ?? CATEGORIES), ...(saved.products ?? []).map((p: Product) => p.category)])] as string[],
+          products, floristCatalogVersion: 1,
+          categories: [...new Set([...(saved.categories ?? CATEGORIES), ...products.map((p: Product) => p.category)])] as string[],
           settings: { ...DEFAULT_SETTINGS, ...settings,
+            storeName: !settings.storeName || ["Kalandra", "Kalandra Hampers & Seserahan"].includes(settings.storeName) ? DEFAULT_SETTINGS.storeName : settings.storeName,
+            storeTagline: !settings.storeTagline || settings.storeTagline === "Hampers & Seserahan" ? DEFAULT_SETTINGS.storeTagline : settings.storeTagline,
             whatsappNumber: settings.whatsappNumber ?? settings.waNumber ?? DEFAULT_SETTINGS.whatsappNumber,
             citySlots: { ...DEFAULT_SETTINGS.citySlots, ...settings.citySlots },
           },

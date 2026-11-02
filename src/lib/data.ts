@@ -12,6 +12,9 @@ import blushSeserahan from "@/assets/blush-seserahan.jpg";
 import skyNewborn from "@/assets/sky-newborn.jpg";
 import macaron from "@/assets/macaron.jpg";
 import coffee from "@/assets/coffee.jpg";
+import flowerBoard from "@/assets/flower-board.jpg";
+import roseLily from "@/assets/rose-lily-bouquet.jpg";
+import wineGourmet from "@/assets/wine-gourmet.jpg";
 
 export const IMAGES = { hero, seserahan, lebaran, newborn, birthday, corporate, lilac, fruits, ruby, eidRoyal, blushSeserahan, skyNewborn, macaron, coffee };
 
@@ -22,6 +25,8 @@ export const CATEGORIES = [
   "Baby Born",
   "Corporate Parcel",
   "Fresh & Healthy",
+  "Bunga Papan",
+  "Buket Mawar & Lily",
 ] as const;
 export type Category = string;
 
@@ -32,6 +37,8 @@ export const CATEGORY_EMOJI: Record<Category, string> = {
   "Baby Born": "👶",
   "Corporate Parcel": "💼",
   "Fresh & Healthy": "🍊",
+  "Bunga Papan": "🌸",
+  "Buket Mawar & Lily": "💐",
 };
 
 export const CITIES = ["Jabodetabek", "Bandung", "Surabaya", "Semarang", "Yogyakarta", "Medan", "Bali"];
@@ -77,6 +84,7 @@ export interface Product {
   rating: number;
   reviews: number;
   badge?: "Ready Stock" | "Slot Terbatas" | "Same-Day";
+  foodStatus?: "halal" | "non-halal" | "non-food";
 }
 
 export interface CartItem {
@@ -132,7 +140,7 @@ export const itemTotal = (i: CartItem) => (i.basePrice + addonsTotal(i.addons)) 
 
 export const ribbonLabel = (id: string) => RIBBONS.find((r) => r.id === id)?.label ?? id;
 
-export const SEED_PRODUCTS: Product[] = [
+const ORIGINAL_PRODUCTS: Product[] = [
   { id: "p1", name: "Sage Celebration Basket", category: "Birthday & Anniv", price: 785000, stock: 12, image: hero, description: "Keranjang rotan berisi sparkling juice, cokelat artisan, dan bunga kering.", active: true, tags: ["popular", "express"], rating: 4.9, reviews: 86 },
   { id: "p2", name: "Peach Rose Anniversary Box", category: "Birthday & Anniv", price: 650000, stock: 4, image: birthday, description: "Buket mawar peach, macaron, dan lilin aromaterapi santal.", active: true, tags: ["popular"], rating: 4.8, reviews: 64 },
   { id: "p3", name: "Parsel Fitri Zamrud", category: "Lebaran & Hari Raya", price: 925000, stock: 20, image: lebaran, description: "Kurma pilihan, kue nastar, putri salju, kastengel dalam box hijau emas.", active: true, tags: ["idulfitri", "popular"], rating: 4.9, reviews: 132 },
@@ -150,6 +158,36 @@ export const SEED_PRODUCTS: Product[] = [
   { id: "p15", name: "Sweet Blossom Macaron & Tea Tower", category: "Birthday & Anniv", price: 320000, stock: 14, image: macaron, description: "Tower pastel berisi 12 macaron Prancis, buket bunga kering mini, dan teh stroberi Twinings.", active: true, tags: ["express", "popular"], rating: 4.8, reviews: 121 },
   { id: "p16", name: "Artisan Coffee & Walnut Wood Executive Set", category: "Corporate Parcel", price: 890000, stock: 18, image: coffee, description: "Krat kayu walnut: drip bag kopi single-origin, mug keramik matte, dan coaster kulit.", active: true, tags: ["express"], rating: 4.9, reviews: 48 },
 ];
+
+
+// Unknown products are not labelled; contradictory contents always override classification.
+export function isHalalProduct(p: Product): boolean {
+  return p.foodStatus === "halal" && !/wine|bir\b|beer|champagne|sampanye|non[- ]?halal|pork|babi|bacon|ham\b|seserahan|hantaran|standing flower|bunga papan|buket (?:bunga|mawar|lily)/i.test(`${p.name} ${p.category} ${p.description}`);
+}
+
+export const FLORIST_ADDITIONS: Product[] = [
+  { id: "florist-wine", name: "Luxury Wine & Truffles Crate", category: "Birthday & Anniv", price: 1450000, stock: 6, image: wineGourmet, description: "Hampers perayaan dengan wine impor dan truffle cokelat premium. Mengandung alkohol.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-halal" },
+  { id: "florist-dates", name: "Buah Lokal & Kurma Berkah", category: "Fresh & Healthy", price: 425000, stock: 12, image: fruits, description: "Buah segar lokal pilihan dan kurma dalam keranjang hadiah.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "halal" },
+  { id: "florist-sparkling", name: "Imported Fruit & Sparkling Wine Basket", category: "Fresh & Healthy", price: 1350000, stock: 5, image: wineGourmet, description: "Buah impor dan sparkling wine untuk perayaan. Mengandung alkohol.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-halal" },
+  { id: "florist-board", name: "Bunga Papan Celebration", category: "Bunga Papan", price: 850000, stock: 10, image: flowerBoard, description: "Karangan bunga papan segar untuk ucapan selamat dan momen istimewa.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-food" },
+  { id: "florist-bouquet", name: "Blush Rose & Lily Hand Bouquet", category: "Buket Mawar & Lily", price: 625000, stock: 8, image: roseLily, description: "Buket mawar blush dan lily putih segar dengan wrapping sage dan pita personal.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-food" },
+  { id: "florist-coffee", name: "Executive Coffee Set", category: "Corporate Parcel", price: 795000, stock: 20, image: coffee, description: "Kopi single-origin, mug keramik, dan coaster dalam kemasan hadiah eksekutif.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "halal" },
+  { id: "florist-cheese", name: "Gourmet Wine & Fine Cheese Box", category: "Corporate Parcel", price: 1650000, stock: 6, image: wineGourmet, description: "Wine premium dan keju gourmet untuk hadiah korporat. Mengandung alkohol.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-halal" },
+ ];
+const HALAL_SEED_IDS = new Set(["p1", "p3", "p4", "p8", "p12", "p15", "p16"]);
+const NON_FOOD_SEED_IDS = new Set(["p5", "p6", "p7", "p13", "p14"]);
+export const SEED_PRODUCTS: Product[] = [
+  ...ORIGINAL_PRODUCTS.map((p): Product => ({ ...p, foodStatus: HALAL_SEED_IDS.has(p.id) ? "halal" : NON_FOOD_SEED_IDS.has(p.id) ? "non-food" : undefined })),
+  ...FLORIST_ADDITIONS,
+];
+export function migrateFloristCatalog(products: Product[], version = 0): Product[] {
+  if (version >= 1) return products;
+  const existing = products.map((p) => {
+    const seed = SEED_PRODUCTS.find((s) => s.id === p.id && s.name === p.name && s.description === p.description && s.category === p.category);
+    return p.foodStatus || !seed ? p : { ...p, foodStatus: seed.foodStatus };
+  });
+  return [...existing, ...FLORIST_ADDITIONS.filter((p) => !existing.some((s) => s.id === p.id))];
+}
 
 const mk = (
   id: string, name: string, email: string, phone: string, city: string, p: Product, status: OrderStatus, daysAgo: number, msg: string, to: string, ribbon = "emerald",

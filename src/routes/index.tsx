@@ -7,15 +7,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SiteHeader, SiteFooter } from "@/components/shop/SiteHeader";
 import { CustomizeDialog } from "@/components/shop/CustomizeDialog";
 import { useStore } from "@/lib/store";
-import { CATEGORY_EMOJI, IMAGES, SHIPPING_FEE, formatIDR, waLink, type Category, type Order, type Product, type ProductTag } from "@/lib/data";
+import { CATEGORY_EMOJI, IMAGES, isHalalProduct, SHIPPING_FEE, formatIDR, waLink, type Category, type Order, type Product, type ProductTag } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kalandra Hampers & Seserahan — Hampers Mewah & Hantaran Pernikahan" },
-      { name: "description", content: "Hampers ulang tahun, parsel Lebaran, newborn, dan seserahan pernikahan dengan kartu ucapan custom & foto sebelum diantar." },
-      { property: "og:title", content: "Kalandra Hampers & Seserahan" },
+      { title: "Kalandra Florist & Gift — Bunga, Parsel & Seserahan" },
+      { name: "description", content: "Karangan bunga, buket mawar dan lily, hampers, parsel dan seserahan dengan kartu ucapan personal & foto sebelum diantar." },
+      { property: "og:title", content: "Kalandra Florist & Gift" },
       { property: "og:description", content: "Rangkaian kasih & keanggunan di setiap momen berharga. Kirim ke 7 kota." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -74,6 +74,7 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
         <span className={cn("absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold", p.stock === 0 ? "bg-destructive text-destructive-foreground" : limited ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground")}>
           {p.stock === 0 ? "Habis" : badge}
         </span>
+        {isHalalProduct(p) && <span aria-label="Halal" lang="ar" className="absolute bottom-3 left-3 rounded bg-halal-badge/85 px-2 py-0.5 font-serif text-lg leading-6 text-primary-foreground">حلال</span>}
       </div>
       <div className="space-y-3 p-4">
         <h3 className="font-serif text-xl leading-tight text-primary">{p.name}</h3>
@@ -142,18 +143,19 @@ function Index() {
     <div className="min-h-screen">
       <SiteHeader />
       <section className="relative overflow-hidden">
-        <HeroSlides images={[settings.heroImage, IMAGES.lebaran, IMAGES.seserahan, IMAGES.birthday]} alt={`Hampers ${settings.storeName}`} />
+        <HeroSlides images={[settings.heroImage, IMAGES.lebaran, IMAGES.seserahan, IMAGES.birthday]} alt={settings.storeName} />
         <div className="absolute inset-0 bg-hero-overlay" />
         <FloatingPetals />
         <div className="relative mx-auto max-w-7xl px-4 py-24 md:py-36">
-          <p className="text-sm uppercase tracking-[0.3em] text-rose">{settings.storeName} · {settings.storeTagline}</p>
-          <h1 className="mt-4 max-w-2xl font-serif text-5xl leading-[1.05] text-primary-foreground md:text-7xl">{settings.heroHeadline}</h1>
+          <p className="max-w-2xl text-sm text-rose">{settings.storeTagline}</p>
+          <h1 className="mt-4 max-w-2xl font-serif text-5xl leading-[1.05] text-primary-foreground md:text-7xl">{settings.storeName}</h1>
+          <p className="mt-5 max-w-xl font-serif text-2xl text-primary-foreground">{settings.heroHeadline}</p>
           <p className="mt-5 max-w-lg text-primary-foreground/80">{settings.heroSubheadline}</p>
           <div className="mt-8 flex flex-wrap gap-2">
             {categories.map((c) => (
-              <button key={c} onClick={() => pickCat(c)} className={cn("rounded-full border px-4 py-2 text-sm backdrop-blur transition", cat === c ? "border-rose bg-rose text-accent-foreground" : "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20")}>
+              <Button variant="outline" key={c} onClick={() => pickCat(c)} className={cn("rounded-full border px-4 py-2 text-sm backdrop-blur transition", cat === c ? "border-rose bg-rose text-accent-foreground" : "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20")}>
                 {CATEGORY_EMOJI[c]} {c === "Lebaran & Hari Raya" ? "Lebaran & Hari Raya" : c === "Baby Born" ? "Baby Born" : c}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

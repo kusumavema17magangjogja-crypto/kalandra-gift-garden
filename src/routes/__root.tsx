@@ -56,8 +56,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kalandra Hampers & Seserahan" },
-      { name: "description", content: "Hampers mewah & seserahan pernikahan dengan kartu ucapan custom." },
+      { title: "Kalandra Florist & Gift" },
+      { name: "description", content: "Karangan bunga, hand bouquet, parsel & seserahan dengan kartu ucapan personal." },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
