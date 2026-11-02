@@ -140,3 +140,30 @@
 @utility animate-pop {
   animation: pop 0.4s ease-out;
 }
+
+@keyframes kenburns {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.12) translate(-1.5%, -1%); }
+}
+@keyframes petal-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.85; }
+  90% { opacity: 0.7; }
+  100% { transform: translate3d(var(--petal-drift, 60px), 110vh, 0) rotate(540deg); opacity: 0; }
+}
+@utility animate-kenburns {
+  animation: kenburns 9s ease-out forwards;
+  will-change: transform;
+}
+@utility petal {
+  position: absolute;
+  top: 0;
+  border-radius: 80% 0 80% 0;
+  background: linear-gradient(135deg, var(--rose), color-mix(in oklab, var(--rose) 55%, var(--background)));
+  animation: petal-fall linear infinite;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-kenburns, .petal { animation: none !important; }
+  .petal { display: none; }
+}

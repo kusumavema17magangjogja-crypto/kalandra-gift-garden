@@ -86,6 +86,36 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
   );
 }
 
+function HeroSlides({ images, alt }: { images: string[]; alt: string }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setIdx((i) => (i + 1) % images.length), 6000);
+    return () => window.clearInterval(t);
+  }, [images.length]);
+  return (
+    <div className="absolute inset-0 overflow-hidden" aria-hidden={false}>
+      {images.map((src, i) => (
+        <img key={src + i} src={src} alt={i === idx ? alt : ""} width={1536} height={1024} loading={i === 0 ? "eager" : "lazy"}
+          className={cn("absolute inset-0 h-full w-full object-cover transition-opacity duration-[1500ms] ease-in-out", i === idx ? "opacity-100 animate-kenburns" : "opacity-0")} />
+      ))}
+    </div>
+  );
+}
+
+const PETALS = Array.from({ length: 14 }, (_, i) => ({
+  left: (i * 37) % 100, size: 8 + ((i * 5) % 9), dur: 11 + ((i * 3) % 8), delay: -((i * 1.7) % 14), drift: ((i % 2 ? 1 : -1) * (30 + (i * 11) % 70)),
+}));
+
+function FloatingPetals() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {PETALS.map((p, i) => (
+        <span key={i} className="petal" style={{ left: `${p.left}%`, width: p.size, height: p.size * 0.8, animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s`, ["--petal-drift" as string]: `${p.drift}px` }} />
+      ))}
+    </div>
+  );
+}
+
 function Index() {
   const { products, categories, settings } = useStore();
   const [tab, setTab] = useState<"all" | ProductTag>("all");
@@ -112,8 +142,9 @@ function Index() {
     <div className="min-h-screen">
       <SiteHeader />
       <section className="relative overflow-hidden">
-        <img src={settings.heroImage} alt={`Hampers ${settings.storeName}`} width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover" />
+        <HeroSlides images={[settings.heroImage, IMAGES.lebaran, IMAGES.seserahan, IMAGES.birthday]} alt={`Hampers ${settings.storeName}`} />
         <div className="absolute inset-0 bg-hero-overlay" />
+        <FloatingPetals />
         <div className="relative mx-auto max-w-7xl px-4 py-24 md:py-36">
           <p className="text-sm uppercase tracking-[0.3em] text-rose">{settings.storeName} · {settings.storeTagline}</p>
           <h1 className="mt-4 max-w-2xl font-serif text-5xl leading-[1.05] text-primary-foreground md:text-7xl">{settings.heroHeadline}</h1>
