@@ -84,7 +84,7 @@ export interface Product {
   rating: number;
   reviews: number;
   badge?: "Ready Stock" | "Slot Terbatas" | "Same-Day";
-  foodStatus?: "halal" | "non-halal" | "non-food";
+  foodStatus?: "halal" | "non-halal" | "non-food" | undefined;
 }
 
 export interface CartItem {
