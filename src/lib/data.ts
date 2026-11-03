@@ -174,7 +174,8 @@ export const FLORIST_ADDITIONS: Product[] = [
   { id: "florist-coffee", name: "Executive Coffee Set", category: "Corporate Parcel", price: 795000, stock: 20, image: coffee, description: "Kopi single-origin, mug keramik, dan coaster dalam kemasan hadiah eksekutif.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "halal" },
   { id: "florist-cheese", name: "Gourmet Wine & Fine Cheese Box", category: "Corporate Parcel", price: 1650000, stock: 6, image: wineGourmet, description: "Wine premium dan keju gourmet untuk hadiah korporat. Mengandung alkohol.", active: true, tags: [], rating: 5, reviews: 0, foodStatus: "non-halal" },
  ];
-const HALAL_SEED_IDS = new Set(["p1", "p3", "p4", "p8", "p12", "p15", "p16"]);
+// The existing p1 photo contains champagne, so it must remain unlabelled.
+const HALAL_SEED_IDS = new Set(["p3", "p4", "p8", "p12", "p15", "p16"]);
 const NON_FOOD_SEED_IDS = new Set(["p5", "p6", "p7", "p13", "p14"]);
 export const SEED_PRODUCTS: Product[] = [
   ...ORIGINAL_PRODUCTS.map((p): Product => ({ ...p, foodStatus: HALAL_SEED_IDS.has(p.id) ? "halal" : NON_FOOD_SEED_IDS.has(p.id) ? "non-food" : undefined })),

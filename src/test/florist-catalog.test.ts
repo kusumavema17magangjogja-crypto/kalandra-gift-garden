@@ -23,6 +23,9 @@ describe("Florist catalog classification", () => {
   it("does not label unknown food products", () => {
     expect(isHalalProduct({ ...product("Executive Coffee Set"), foodStatus: undefined })).toBe(false);
   });
+  it("does not label the original hamper whose preserved photo contains champagne", () => {
+    expect(isHalalProduct(product("Sage Celebration Basket"))).toBe(false);
+  });
   it("preserves saved image URLs and customized catalog data", () => {
     const saved = { ...product("Executive Coffee Set"), id: "p1", name: "Custom gift", image: "https://example.com/existing.jpg", price: 123000 };
     const migrated = migrateFloristCatalog([saved]);
