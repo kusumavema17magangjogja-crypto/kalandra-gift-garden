@@ -13,6 +13,8 @@ import { GreetingCard } from "./GreetingCard";
 import { ADDONS, RIBBONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { CARD_TEMPLATES } from "@/data/floristData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX = 200;
 
@@ -22,20 +24,21 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("");
   const [ribbon, setRibbon] = useState("emerald");
+  const [cardTemplate, setCardTemplate] = useState("classic");
   const [date, setDate] = useState<Date | undefined>();
   const [addons, setAddons] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
 
   useEffect(() => {
     if (product) {
-      setTo(""); setFrom(user?.name.split(" ")[0] ?? ""); setMessage(""); setRibbon("emerald");
+      setTo(""); setFrom(user?.name.split(" ")[0] ?? ""); setMessage(""); setRibbon("emerald"); setCardTemplate("classic");
       setDate(new Date(Date.now() + 864e5)); setAddons([]); setQty(1);
     }
   }, [product, user]);
 
   if (!product) return null;
   const total = (product.price + addonsTotal(addons)) * qty;
-  const custom = { to, from, message, ribbon, deliveryDate: date?.toISOString() ?? "", addons, qty };
+  const custom = { to, from, message, ribbon, cardTemplate, deliveryDate: date?.toISOString() ?? "", addons, qty };
 
   const add = () => {
     if (isAdmin) return;
@@ -75,21 +78,25 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Untuk (To)</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" /></div>
-              <div className="space-y-1.5"><Label>Dari (From)</Label><Input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" /></div>
+              <div className="space-y-1.5"><Label htmlFor="gift-to">Untuk (To)</Label><Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" /></div>
+              <div className="space-y-1.5"><Label htmlFor="gift-from">Dari (From)</Label><Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" /></div>
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between"><Label>Pesan Kartu Ucapan</Label><span className="text-xs text-muted-foreground">{message.length}/{MAX}</span></div>
               <Textarea rows={4} maxLength={MAX} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Selamat ulang tahun…" />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="card-template">Desain Kartu Ucapan</Label>
+              <Select value={cardTemplate} onValueChange={setCardTemplate}><SelectTrigger id="card-template"><SelectValue /></SelectTrigger><SelectContent>{CARD_TEMPLATES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div className="space-y-2">
               <Label>Warna Pita</Label>
               <div className="grid grid-cols-2 gap-2">
                 {RIBBONS.map((r) => (
-                  <button key={r.id} type="button" onClick={() => setRibbon(r.id)}
-                    className={cn("flex items-center gap-2 rounded-lg border p-2 text-sm transition", ribbon === r.id ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40")}>
+                  <Button variant="outline" key={r.id} type="button" onClick={() => setRibbon(r.id)} aria-pressed={ribbon === r.id}
+                    className={cn("h-auto justify-start whitespace-normal p-2 text-sm transition", ribbon === r.id ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40")}>
                     <span className={cn("h-5 w-5 rounded-full", r.className)} />{r.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -122,7 +129,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
           </div>
           <div className="flex flex-col gap-5 bg-secondary p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pratinjau Kartu Ucapan</p>
-            <GreetingCard to={to} from={from} message={message} ribbon={ribbon} />
+            <GreetingCard to={to} from={from} message={message} ribbon={ribbon} cardTemplate={cardTemplate} />
             {!isAdmin && <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total ({qty}x)</span><span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span></div>
               <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}><ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang</Button>
