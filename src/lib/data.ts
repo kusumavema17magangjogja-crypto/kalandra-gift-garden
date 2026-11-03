@@ -53,18 +53,8 @@ export const SHIPPING_FEE: Record<string, number> = {
   Bali: 60000,
 };
 
-export const RIBBONS = [
-  { id: "emerald", label: "Emerald Green", className: "bg-ribbon-emerald" },
-  { id: "gold", label: "Champagne Gold", className: "bg-ribbon-gold" },
-  { id: "terracotta", label: "Soft Terracotta", className: "bg-ribbon-terracotta" },
-  { id: "burgundy", label: "Burgundy", className: "bg-ribbon-burgundy" },
-] as const;
-
-export const ADDONS = [
-  { id: "topper", label: "Wooden Acrylic Topper", price: 25000 },
-  { id: "chocolate", label: "Artisan Chocolate Box", price: 45000 },
-  { id: "bag", label: "Spunbond Bag Premium", price: 15000 },
-] as const;
+export { RIBBONS, ADDONS } from "@/data/floristData";
+import { RIBBONS, ADDONS, cardTemplateLabel } from "@/data/floristData";
 
 export const ORDER_STATUSES = ["Menunggu Pembayaran", "Sedang Dirangkai", "Dalam Pengiriman", "Selesai"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -84,6 +74,7 @@ export interface Product {
   rating: number;
   reviews: number;
   badge?: "Ready Stock" | "Slot Terbatas" | "Same-Day";
+  occasions?: string[];
   foodStatus?: "halal" | "non-halal" | "non-food" | undefined;
 }
 
@@ -98,6 +89,7 @@ export interface CartItem {
   from: string;
   message: string;
   ribbon: string;
+  cardTemplate?: string;
   deliveryDate: string;
   addons: string[];
 }
@@ -162,7 +154,7 @@ const ORIGINAL_PRODUCTS: Product[] = [
 
 // Unknown products are not labelled; contradictory contents always override classification.
 export function isHalalProduct(p: Product): boolean {
-  return p.foodStatus === "halal" && !/wine|bir\b|beer|champagne|sampanye|non[- ]?halal|pork|babi|bacon|ham\b|seserahan|hantaran|standing flower|bunga papan|buket (?:bunga|mawar|lily)/i.test(`${p.name} ${p.category} ${p.description}`);
+  return p.foodStatus === "halal" && !/wine|bir\b|beer|champagne|sampanye|non[- ]?halal|pork|babi|bacon|ham\b|seserahan|hantaran|standing|bunga papan|papan bunga|papan acrylic|akrilik|acrylic|hand bouquet|buket/i.test(`${p.name} ${p.category} ${p.description}`);
 }
 
 export const FLORIST_ADDITIONS: Product[] = [
@@ -248,6 +240,7 @@ export function buildWaMessage(p: { name: string; price: number }, c: Omit<CartI
     `• Tanggal kirim: ${formatDate(c.deliveryDate)}`,
     `• Pita: ${ribbonLabel(c.ribbon)}`,
     `• Add-on: ${addons}`,
+    `• Desain kartu: ${cardTemplateLabel(c.cardTemplate)}`,
     `• Kartu ucapan — To: ${c.to || "-"} | From: ${c.from || "-"}`,
     `  "${c.message || "-"}"`,
     `Total: ${formatIDR((p.price + addonsTotal(c.addons)) * c.qty)}`,
