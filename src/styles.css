@@ -42,6 +42,8 @@
   --color-ribbon-gold: var(--ribbon-gold);
   --color-ribbon-terracotta: var(--ribbon-terracotta);
   --color-ribbon-burgundy: var(--ribbon-burgundy);
+  --color-ribbon-sage: var(--ribbon-sage);
+  --color-ribbon-rose-gold: var(--ribbon-rose-gold);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -88,6 +90,8 @@
   --ribbon-gold: oklch(0.8 0.09 85);
   --ribbon-terracotta: oklch(0.62 0.11 40);
   --ribbon-burgundy: oklch(0.38 0.12 15);
+  --ribbon-sage: oklch(0.7 0.055 145);
+  --ribbon-rose-gold: oklch(0.75 0.075 40);
   --chart-1: oklch(0.33 0.045 168);
   --chart-2: oklch(0.57 0.11 35);
   --chart-3: oklch(0.7 0.065 30);
@@ -176,6 +180,14 @@
 }
 .marquee-track { animation: notification-scroll 32s linear infinite; }
 .notification-marquee:hover .marquee-track { animation-play-state: paused; }
+.greeting-card { min-height: 365px; overflow-wrap: anywhere; }
+.greeting-classic { border: 2px solid var(--rose); }
+.greeting-gold { border: 5px double var(--ribbon-gold); }
+.greeting-gold .font-serif { font-family: Georgia, serif; }
+.greeting-minimal { border: 1px solid var(--border); background: var(--card); }
+.greeting-minimal .font-serif { font-family: var(--font-sans); font-style: normal; }
+.greeting-islamic { border: 6px double var(--primary); border-radius: 0; }
+.greeting-islamic .font-serif { font-family: Georgia, serif; }
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none; }
   .notification-marquee { overflow-x: auto; }

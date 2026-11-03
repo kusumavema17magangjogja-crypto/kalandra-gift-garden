@@ -1,11 +1,13 @@
 import { Leaf } from "lucide-react";
 import { RIBBONS } from "@/lib/data";
+import { CARD_TEMPLATES } from "@/data/floristData";
 import { cn } from "@/lib/utils";
 
-export function GreetingCard({ to, from, message, ribbon, className }: { to: string; from: string; message: string; ribbon: string; className?: string }) {
+export function GreetingCard({ to, from, message, ribbon, cardTemplate = "classic", className }: { to: string; from: string; message: string; ribbon: string; cardTemplate?: string; className?: string }) {
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
+  const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
   return (
-    <div className={cn("relative overflow-hidden rounded-xl border bg-card-paper p-6 pt-10 shadow-lift", className)}>
+    <div className={cn("greeting-card relative overflow-hidden rounded-lg border bg-card-paper p-6 pt-10 shadow-lift", template.className, className)}>
       <div className={cn("absolute inset-x-0 top-5 h-3", r.className)} />
       <div className={cn("absolute left-1/2 top-2 h-9 w-14 -translate-x-1/2 rounded-full", r.className)} />
       <div className="mt-6 text-center">
