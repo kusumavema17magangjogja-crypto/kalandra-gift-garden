@@ -1,4 +1,6 @@
 # Storefront tasks
+- [ ] Align product-card titles, descriptions, prices and bottom actions; prevent badge overlap.
+- [ ] Expand centralized catalog to the 50 named products and exact prices from the latest brief.
 - [ ] Centralize commercial data and expand detailed catalogs safely.
 - [ ] Add greeting templates, six ribbons and complete add-ons throughout ordering.
 - [ ] Add daily flash sale, occasion/budget shopping, articles, FAQ and payment/footer sections.
