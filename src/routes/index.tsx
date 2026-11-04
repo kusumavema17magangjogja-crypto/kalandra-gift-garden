@@ -9,6 +9,8 @@ import { CustomizeDialog } from "@/components/shop/CustomizeDialog";
 import { useStore } from "@/lib/store";
 import { CATEGORY_EMOJI, IMAGES, isHalalProduct, SHIPPING_FEE, formatIDR, waLink, type Category, type Order, type Product, type ProductTag } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { FlashSale, ShoppingSelectors, InspirationAndHelp } from "@/components/shop/CommercialSections";
+import { BUDGETS, OCCASIONS, matchesOccasion } from "@/data/floristData";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -121,6 +123,8 @@ function Index() {
   const { products, categories, settings } = useStore();
   const [tab, setTab] = useState<"all" | ProductTag>("all");
   const [cat, setCat] = useState<Category | null>(null);
+  const [occasion, setOccasion] = useState<string | null>(null);
+  const [budget, setBudget] = useState<string | null>(null);
   const [picked, setPicked] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -130,8 +134,11 @@ function Index() {
   }, [products]);
 
   const list = useMemo(
-    () => products.filter((p) => p.active && (tab === "all" || p.tags.includes(tab)) && (!cat || p.category === cat)),
-    [products, tab, cat],
+    () => products.filter((p) => {
+      const range = BUDGETS.find(b => b.id === budget);
+      return p.active && (tab === "all" || p.tags.includes(tab)) && (!cat || p.category === cat) && (!occasion || matchesOccasion(p, occasion)) && (!range || (p.price >= range.min && p.price < range.max));
+    }),
+    [products, tab, cat, occasion, budget],
   );
 
   const pickCat = (c: Category) => {
@@ -161,10 +168,12 @@ function Index() {
         </div>
       </section>
 
+      <FlashSale onPick={setPicked} />
+      <ShoppingSelectors occasion={occasion} budget={budget} onOccasion={(id) => { setOccasion(occasion === id ? null : id); setCat(null); setTab("all"); document.getElementById("katalog")?.scrollIntoView({ behavior: "smooth" }); }} onBudget={(id) => { setBudget(budget === id ? null : id); document.getElementById("katalog")?.scrollIntoView({ behavior: "smooth" }); }} />
       <section id="katalog" className="mx-auto max-w-7xl scroll-mt-32 px-4 py-16">
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div><p className="text-sm uppercase tracking-[0.25em] text-accent">Katalog</p><h2 className="font-serif text-4xl text-primary md:text-5xl">Koleksi Pilihan</h2>
-            {cat && <button onClick={() => setCat(null)} className="mt-1 text-sm text-muted-foreground hover:underline">Filter: {cat} ✕</button>}</div>
+            <div className="mt-2 flex flex-wrap gap-2">{cat && <Button variant="outline" size="sm" onClick={() => setCat(null)}>{cat} ✕</Button>}{occasion && <Button variant="outline" size="sm" onClick={() => setOccasion(null)}>{OCCASIONS.find(o => o.id === occasion)?.label} ✕</Button>}{budget && <Button variant="outline" size="sm" onClick={() => setBudget(null)}>{BUDGETS.find(b => b.id === budget)?.label} ✕</Button>}</div></div>
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="max-w-full overflow-x-auto">
             <TabsList className="bg-secondary">{TABS.map((t) => <TabsTrigger key={t.id} value={t.id}>{t.label}</TabsTrigger>)}</TabsList>
           </Tabs>
@@ -227,6 +236,7 @@ function Index() {
         </div>
       </section>
 
+      <InspirationAndHelp />
       <SiteFooter />
       <Button asChild size="lg" className="fixed bottom-5 right-5 z-30 rounded-full bg-success text-success-foreground shadow-lift hover:bg-success/90"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin tanya stok & ongkir.`)} target="_blank" rel="noreferrer" aria-label="Tanya Stok & Ongkir"><MessageCircle className="h-5 w-5" /><span className="hidden sm:inline">Tanya Stok & Ongkir</span></a></Button>
       <CustomizeDialog product={picked} onOpenChange={(o) => !o && setPicked(null)} />

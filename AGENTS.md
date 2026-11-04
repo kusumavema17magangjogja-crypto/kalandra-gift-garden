@@ -21,3 +21,6 @@
 
 - Keep product food classification explicit and default unknown products to no halal badge; content exclusions override a conflicting classification.
 - Apply versioned catalog migrations only during hydration, preserving existing images and customized data and never resurrecting deleted additions on later mounts.
+- Centralize commercial catalog, promotions, occasion/budget definitions, articles, card templates and add-ons in src/data/floristData.ts; use type-only data imports to avoid circular runtime dependencies.
+- Preserve optional cardTemplate on cart/order items and default missing values to the classic design so existing orders remain readable.
+- Flash-sale cards derive discounts from current catalog prices and stock, and the countdown targets the next Jakarta midnight without fetching or mutating stock.
