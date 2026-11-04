@@ -154,7 +154,10 @@ const ORIGINAL_PRODUCTS: Product[] = [
 
 // Unknown products are not labelled; contradictory contents always override classification.
 export function isHalalProduct(p: Product): boolean {
-  return p.foodStatus === "halal" && !/wine|bir\b|beer|champagne|sampanye|non[- ]?halal|pork|babi|bacon|ham\b|seserahan|hantaran|standing|bunga papan|papan bunga|papan acrylic|akrilik|acrylic|hand bouquet|buket/i.test(`${p.name} ${p.category} ${p.description}`);
+  if (p.foodStatus !== "halal") return false;
+  const contents = `${p.name} ${p.description}`;
+  if (/wine|bir\b|beer|champagne|sampanye|liqueur|whisk[ey]+|scotch|non[- ]?halal|pork|babi|bacon|ham\b/i.test(contents)) return false;
+  return !/seserahan|hantaran|standing|bunga papan|papan bunga|papan acrylic|akrilik|acrylic|hand bouquet|buket/i.test(contents);
 }
 
 export const FLORIST_ADDITIONS: Product[] = [
