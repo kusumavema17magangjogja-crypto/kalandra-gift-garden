@@ -113,7 +113,7 @@ function Profile() {
       <SiteFooter />
       <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
         <DialogContent className="max-w-sm"><DialogHeader><DialogTitle className="font-serif text-2xl text-primary">Kartu Ucapan</DialogTitle></DialogHeader>
-          {card && <GreetingCard to={card.to} from={card.from} message={card.message} ribbon={card.ribbon} />}</DialogContent>
+          {card && <GreetingCard to={card.to} from={card.from} message={card.message} ribbon={card.ribbon} cardTemplate={card.cardTemplate} />}</DialogContent>
       </Dialog>
     </div>
   );

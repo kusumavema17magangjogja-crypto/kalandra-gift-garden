@@ -227,7 +227,7 @@ function Orders() {
           {card?.items.map((i) => (
             <div key={i.key} className="space-y-2">
               <p className="text-sm text-muted-foreground">{i.name} · Pita <b>{ribbonLabel(i.ribbon)}</b></p>
-              <GreetingCard to={i.to} from={i.from} message={i.message} ribbon={i.ribbon} />
+              <GreetingCard to={i.to} from={i.from} message={i.message} ribbon={i.ribbon} cardTemplate={i.cardTemplate} />
             </div>
           ))}
         </DialogContent>

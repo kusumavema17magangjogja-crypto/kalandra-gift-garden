@@ -171,14 +171,15 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const { settings, isAdmin, setAdminOpen } = useStore();
+  const { settings, isAdmin, setAdminOpen, categories } = useStore();
   const navigate = useNavigate();
   return (
     <footer className="mt-20 bg-primary text-primary-foreground">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3">
-        <div><p className="font-serif text-2xl">{settings.storeName} {settings.storeTagline}</p><p className="mt-2 text-sm text-primary-foreground/70">{settings.footerDescription}</p></div>
-        <div className="text-sm text-primary-foreground/80"><p className="font-semibold text-primary-foreground">Kota Layanan</p><p className="mt-2">{CITIES.join(" · ")}</p></div>
-        <div className="text-sm text-primary-foreground/80"><p className="font-semibold text-primary-foreground">Jam Operasional</p><p className="mt-2">{settings.operatingHours}</p></div>
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div id="tentang"><p className="font-serif text-2xl">{settings.storeName}</p><p className="mt-2 text-sm text-primary-foreground/70">{settings.footerDescription}</p><p className="mt-4 text-xs text-primary-foreground/70">{settings.operatingHours}</p></div>
+        <div><p className="font-semibold">Kategori Produk</p><nav className="mt-3 flex flex-col items-start gap-2 text-sm text-primary-foreground/75">{categories.map(c => <Link key={c} to="/" hash="katalog" onClick={() => window.dispatchEvent(new CustomEvent("kalandra:category", { detail: c }))} className="hover:underline">{c}</Link>)}</nav></div>
+        <div><p className="font-semibold">Bantuan</p><nav className="mt-3 flex flex-col items-start gap-2 text-sm text-primary-foreground/75"><Link to="/" hash="faq">Pertanyaan Umum</Link><Link to="/" hash="pembayaran">Metode Pembayaran</Link><Link to="/" hash="inspirasi">Panduan & Inspirasi</Link><Link to="/" hash="galeri">Foto Bukti Jadi</Link></nav><p className="mt-5 text-sm font-semibold">Tentang Kami</p><Link to="/" hash="tentang" className="mt-2 block text-sm text-primary-foreground/75">Kalandra Florist & Gift</Link></div>
+        <div className="text-sm text-primary-foreground/80"><p className="font-semibold text-primary-foreground">Kontak CS WhatsApp</p><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin bertanya.`)} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-2"><MessageCircle className="h-4 w-4" />{settings.whatsappNumber}</a><p className="mt-5 font-semibold text-primary-foreground">Kota Layanan</p><p className="mt-2">{CITIES.join(" · ")}</p></div>
       </div>
       <div className="mx-auto flex max-w-7xl flex-wrap gap-5 px-4 pb-8 text-sm"><a href={waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin bertanya.`)} target="_blank" rel="noreferrer">WhatsApp</a><a href={settings.instagramUrl} target="_blank" rel="noreferrer">Instagram</a><a href={settings.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a></div>
       <p className="border-t border-primary-foreground/10 py-4 text-center text-xs text-primary-foreground/60">© 2026 {settings.storeName}. All rights reserved. · <Button variant="link" className="h-auto p-0 text-inherit" onClick={() => isAdmin ? navigate({ to: "/admin" }) : setAdminOpen(true)}>Portal Admin</Button></p>

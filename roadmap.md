@@ -1,8 +1,10 @@
 # Storefront tasks
-- [ ] Centralize commercial data and expand detailed catalogs safely.
-- [ ] Add greeting templates, six ribbons and complete add-ons throughout ordering.
-- [ ] Add daily flash sale, occasion/budget shopping, articles, FAQ and payment/footer sections.
-- [ ] Verify commercial rules and guest checkout on desktop and narrow screens.
+- [x] Align product-card titles, descriptions, prices and bottom actions; prevent badge overlap.
+- [x] Expand centralized catalog to the 50 named products and exact prices from the latest brief.
+- [x] Centralize commercial data and expand detailed catalogs safely.
+- [x] Add greeting templates, six ribbons and complete add-ons throughout ordering.
+- [x] Add daily flash sale, occasion/budget shopping, articles, FAQ and payment/footer sections.
+- [x] Verify commercial rules and guest checkout on desktop and narrow screens.
 - [x] Rebrand identity and top marquee while preserving existing product images.
 - [x] Add selective halal classification and complementary florist/food/wine products.
 - [x] Verify catalog migration, hero animation, and desktop/mobile purchasing.

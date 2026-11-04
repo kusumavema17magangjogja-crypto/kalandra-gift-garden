@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/lib/store";
 import { ADDONS, buildCartWaMessage, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS, waLink } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { cardTemplateLabel } from "@/data/floristData";
 
 export function CartDrawer() {
   const s = useStore();
@@ -28,6 +29,7 @@ export function CartDrawer() {
                     <button onClick={() => s.removeFromCart(i.key)} aria-label="Hapus" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></div>
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className={cn("h-3 w-3 rounded-full", RIBBONS.find((r) => r.id === i.ribbon)?.className)} />Pita {ribbonLabel(i.ribbon)} · Kirim {formatDate(i.deliveryDate)}</p>
                   <p className="truncate text-xs italic text-muted-foreground">"{i.message || "—"}" — untuk {i.to}</p>
+                  <p className="text-xs text-muted-foreground">Kartu: {cardTemplateLabel(i.cardTemplate)}</p>
                   {i.addons.length > 0 && <p className="text-xs text-muted-foreground">+ {ADDONS.filter((a) => i.addons.includes(a.id)).map((a) => a.label).join(", ")}</p>}
                   <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center rounded-md border">

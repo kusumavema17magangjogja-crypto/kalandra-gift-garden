@@ -1,4 +1,4 @@
-import { COMMERCIAL_PRODUCTS, COMMERCIAL_CATEGORIES, migrateCommercialCatalog } from "@/data/floristData";
+import { COMMERCIAL_PRODUCTS, COMMERCIAL_CATEGORIES, COMMERCIAL_CATALOG_VERSION, migrateCommercialCatalog } from "@/data/floristData";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   makeSeedOrders, SEED_PRODUCTS, SEED_USERS, SHIPPING_FEE, CITIES, CATEGORIES, itemTotal,
@@ -43,9 +43,9 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const makeInitial = (): State => ({
   floristCatalogVersion: 1,
-  commercialCatalogVersion: 1,
-  categories: [...CATEGORIES, ...COMMERCIAL_CATEGORIES],
-  products: [...SEED_PRODUCTS, ...COMMERCIAL_PRODUCTS],
+  commercialCatalogVersion: COMMERCIAL_CATALOG_VERSION,
+  categories: [...COMMERCIAL_CATEGORIES],
+  products: COMMERCIAL_PRODUCTS,
   users: SEED_USERS,
   currentEmail: null,
   city: "Jabodetabek",
@@ -122,7 +122,7 @@ function useStoreValue() {
         const settings = saved.settings ?? {};
         const products = migrateCommercialCatalog(migrateFloristCatalog(saved.products ?? SEED_PRODUCTS, saved.floristCatalogVersion ?? 0), saved.commercialCatalogVersion ?? 0);
         setS({ ...defaults, ...saved, currentEmail: sessionStorage.getItem(SESSION_KEY),
-          products, floristCatalogVersion: 1, commercialCatalogVersion: 1,
+          products, floristCatalogVersion: 1, commercialCatalogVersion: COMMERCIAL_CATALOG_VERSION,
           categories: [...new Set([...(saved.categories ?? CATEGORIES), ...products.map((p: Product) => p.category)])] as string[],
           settings: { ...DEFAULT_SETTINGS, ...settings,
             storeName: !settings.storeName || ["Kalandra", "Kalandra Hampers & Seserahan"].includes(settings.storeName) ? DEFAULT_SETTINGS.storeName : settings.storeName,

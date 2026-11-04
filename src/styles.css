@@ -186,7 +186,7 @@
 .greeting-gold .font-serif { font-family: Georgia, serif; }
 .greeting-minimal { border: 1px solid var(--border); background: var(--card); }
 .greeting-minimal .font-serif { font-family: var(--font-sans); font-style: normal; }
-.greeting-islamic { border: 6px double var(--primary); border-radius: 0; }
+.greeting-islamic { border: 6px double var(--primary); border-radius: 0; background-image: repeating-linear-gradient(45deg, transparent 0 14px, color-mix(in oklab, var(--primary) 6%, transparent) 14px 15px), repeating-linear-gradient(-45deg, transparent 0 14px, color-mix(in oklab, var(--primary) 6%, transparent) 14px 15px); }
 .greeting-islamic .font-serif { font-family: Georgia, serif; }
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none; }

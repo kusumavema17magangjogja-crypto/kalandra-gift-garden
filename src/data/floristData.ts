@@ -8,6 +8,14 @@ import eid from '@/assets/lebaran.jpg';
 import wine from '@/assets/wine-gourmet.jpg';
 import wedding from '@/assets/seserahan.jpg';
 import blush from '@/assets/blush-seserahan.jpg';
+import sunflower from '@/assets/sunflower-graduation.jpg';
+import bloom from '@/assets/chocolate-bloom-box.jpg';
+import birthday from '@/assets/birthday.jpg';
+import lilac from '@/assets/lilac.jpg';
+import ruby from '@/assets/ruby.jpg';
+import newborn from '@/assets/newborn.jpg';
+import coffee from '@/assets/coffee.jpg';
+import macaron from '@/assets/macaron.jpg';
 
 export const RIBBONS = [
   { id: 'emerald', label: 'Emerald Green', className: 'bg-ribbon-emerald' },
@@ -33,41 +41,72 @@ export const CARD_TEMPLATES = [
 ] as const;
 export const cardTemplateLabel = (id = 'classic') => CARD_TEMPLATES.find(t => t.id === id)?.label ?? CARD_TEMPLATES[0].label;
 export const CUSTOM_NOTE = 'Bisa Request Warna/Nuansa Bunga & Tulisan';
-export const COMMERCIAL_CATEGORIES = ['Papan Bunga & Papan Acrylic', 'Hand Bouquet & Standing Flower', 'Parsel & Hampers', 'Seserahan & Hantaran Pernikahan'];
-function product(id: string, name: string, category: string, price: number, image: string, description: string, occasions: string[], foodStatus: Product['foodStatus'] = 'non-food'): Product {
-  return { id: `commercial-${id}`, name, category, price, image, description: `${description} ${CUSTOM_NOTE}.`, occasions, foodStatus, stock: 10, active: true, tags: ['express'], rating: 5, reviews: 0 };
+export const COMMERCIAL_CATEGORIES = ["Papan Bunga & Papan Acrylic", "Hand Bouquet & Bloom Box", "Fresh & Healthy / Parsel Buah", "Birthday, Anniv & Luxury Hampers", "Lebaran, Seserahan, Baby Born & Corporate"] as const;
+export const COMMERCIAL_CATALOG_VERSION = 2;
+function product(id: string, name: string, category: string, price: number, image: string, description: string, occasions: string[], foodStatus: Product["foodStatus"] = "non-food"): Product {
+  return { id, name, category, price, image, description: `${description}. ${CUSTOM_NOTE}.`, occasions, foodStatus, stock: 10, active: true, tags: ["express"], rating: 5, reviews: 0 };
 }
 export const COMMERCIAL_PRODUCTS: Product[] = [
-  product('board-duka', 'Bunga Papan Duka Cita New Printing', COMMERCIAL_CATEGORIES[0], 750000, board, 'Papan 2m × 1,25m, cetak ucapan, krisan putih dan daun segar. Rangka kayu dengan penyangga; bunga tampil prima 1–2 hari.', ['duka']),
-  product('board-opening', 'Bunga Papan Congratulations & Grand Opening', COMMERCIAL_CATEGORIES[0], 950000, board, 'Papan 2m × 1,5m, mawar, krisan dan lettering ucapan pembukaan usaha. Termasuk kaki penyangga.', ['opening','corporate']),
-  product('board-wedding', 'Bunga Papan Happy Wedding Romansa Pastel', COMMERCIAL_CATEGORIES[0], 850000, board, 'Papan 2m × 1,25m, bunga pastel, nama mempelai dan ucapan pernikahan; rangka kayu.', ['wedding']),
-  product('acrylic-wedding', 'Papan Acrylic Modern Tripod Wedding', COMMERCIAL_CATEGORIES[0], 625000, acrylic, 'Akrilik transparan 60 × 90cm, tripod kayu dan dekor bunga blush. Tulisan nama mempelai personal.', ['wedding']),
-  product('acrylic-opening', 'Papan Acrylic Grand Opening Gold Foil', COMMERCIAL_CATEGORIES[0], 695000, acrylic, 'Akrilik 60 × 90cm dengan lettering gold foil, tripod kayu natural dan dekor bunga.', ['opening','corporate']),
-  product('board-paper', 'Papan Bunga Kertas Ramah Lingkungan', COMMERCIAL_CATEGORIES[0], 475000, board, 'Papan 1,5 × 1m, bunga kertas dan tulisan personal, rangka kayu; dekor dapat disimpan di ruang kering.', ['opening','wedding']),
-  product('sunflower', 'Buket Wisuda Sunflower & Cotton', COMMERCIAL_CATEGORIES[1], 285000, bouquet, '3 sunflower, 5 cotton stems, eucalyptus, wrapping Korea dan pita; tinggi sekitar 45cm, bunga segar 3–5 hari dengan perawatan.', ['wisuda']),
-  product('roses', 'Buket Mawar Merah Korea Style (50 tangkai)', COMMERCIAL_CATEGORIES[1], 1250000, bouquet, '50 mawar merah segar dengan wrapping berlapis dan pita burgundy; tinggi sekitar 60cm. Ketahanan 3–5 hari dengan perawatan.', ['romantic']),
-  product('lily', 'Buket Lily Casablanca & Hydrangea', COMMERCIAL_CATEGORIES[1], 675000, bouquet, '3 batang lily Casablanca, 2 hydrangea dan eucalyptus, wrapping premium; tinggi sekitar 50cm.', ['romantic','well']),
-  product('standing-duka', 'Standing Flower Duka Cita Krisan & Salib', COMMERCIAL_CATEGORIES[1], 1100000, standing, 'Krisan putih, lily dan daun hijau dengan dekor salib sesuai permintaan; standing sekitar 170cm termasuk kaki.', ['duka']),
-  product('standing-gold', 'Standing Flower Tripod Besi Elegan Gold', COMMERCIAL_CATEGORIES[1], 950000, standing, 'Lily putih, krisan dan daun segar di tripod besi emas; tinggi total sekitar 160cm, kartu ucapan termasuk.', ['opening','wedding','corporate']),
-  product('fruit', 'Parsel Buah Segar Premium', COMMERCIAL_CATEGORIES[2], 425000, fruits, 'Apel, jeruk, pir dan anggur pilihan sekitar 3kg, keranjang rotan dan pita; simpan buah di lemari pendingin.', ['well','corporate'], 'halal'),
-  product('eid-mini', 'Hampers Lebaran Mini Berkah', COMMERCIAL_CATEGORIES[2], 450000, eid, '3 toples 250g nastar, putri salju dan kastengel, kurma 200g serta box berpita; ikuti tanggal kedaluwarsa kemasan.', ['corporate'], 'halal'),
-  product('eid-crystal', 'Parsel Fitri Zamrud Toples Kristal', COMMERCIAL_CATEGORIES[2], 925000, eid, '4 toples kristal kue kering masing-masing 250g, kurma 250g, kemasan zamrud dan pita emas.', ['corporate'], 'halal'),
-  product('juice', 'Celebration Basket Sparkling Juice', COMMERCIAL_CATEGORIES[2], 625000, fruits, 'Sparkling grape juice non-alkohol 750ml, buah pilihan 2kg dan biskuit halal 200g dalam keranjang rotan.', ['romantic','well'], 'halal'),
-  product('wine', 'Vintage Wine & European Cheese Selection', COMMERCIAL_CATEGORIES[2], 1650000, wine, 'Wine impor 750ml, keju Eropa 200g dan crackers 150g dalam gift box; mengandung alkohol, non-halal/gourmet.', ['corporate','romantic'], 'non-halal'),
-  product('chandon', 'Chandon Sparkling Champagne & Truffles', COMMERCIAL_CATEGORIES[2], 1850000, wine, 'Chandon sparkling wine 750ml dan truffles 200g dalam box premium; mengandung alkohol, non-halal/gourmet.', ['corporate','romantic'], 'non-halal'),
-  product('seven-box', 'Set 7 Box Akrilik Bunga Terracotta', COMMERCIAL_CATEGORIES[3], 3500000, wedding, '7 kotak akrilik sekitar 30 × 40cm, bunga terracotta dan pita; isi barang pribadi disediakan pelanggan.', ['wedding']),
-  product('five-box', 'Set 5 Box Akrilik Bunga Blush Pink', COMMERCIAL_CATEGORIES[3], 2450000, blush, '5 kotak akrilik sekitar 30 × 40cm, dekor blush pink dan label nama; isi barang pribadi disediakan pelanggan.', ['wedding']),
-  product('mahar', "Kotak Mahar Al-Qur'an & Tasbih Kristal", COMMERCIAL_CATEGORIES[3], 1250000, wedding, "Kotak akrilik 30 × 40cm, Al-Qur'an, tasbih kristal dan bunga dekoratif dengan nama mempelai.", ['wedding']),
-  product('sage-box', 'Set 5 Box Hantaran Sage & Ivory', COMMERCIAL_CATEGORIES[3], 2250000, blush, '5 baki akrilik 30 × 40cm, bunga ivory, pita sage dan label nama; barang hantaran tidak termasuk.', ['wedding']),
-  product('ring', 'Kotak Cincin Akrilik Floral', COMMERCIAL_CATEGORIES[3], 375000, wedding, 'Kotak akrilik 15 × 15cm, bantalan cincin dan dekor bunga mini; cincin tidak termasuk.', ['wedding']),
+  product("catalog-01", "Bunga Papan Duka Cita New Printing (2m x 1.25m)", COMMERCIAL_CATEGORIES[0], 600000, board, "Rangka kayu, ucapan printing rapi, bunga krisan & aster segar. Bisa request nama & warna", ["duka"], "non-food"),
+  product("catalog-02", "Bunga Papan Grand Opening Sukses Mulia (2m x 1.25m)", COMMERCIAL_CATEGORIES[0], 650000, board, "Rangkaian bunga segar keliling dengan ucapan selamat cerah. Bisa custom logo", ["opening", "corporate"], "non-food"),
+  product("catalog-03", "Bunga Papan Happy Wedding Romansa Pastel (2m x 1.25m)", COMMERCIAL_CATEGORIES[0], 750000, board, "Nuansa pastel pink, peach, dan putih dengan hiasan suyok keliling. Bisa request konsep", ["wedding"], "non-food"),
+  product("catalog-04", "Bunga Papan Pelantikan Pejabat Emas Zamrud (2m x 1.5m)", COMMERCIAL_CATEGORIES[0], 850000, board, "Ukuran jumbo elegan nuansa emas hijau botol dengan ronce melati sintesis", ["opening", "corporate"], "non-food"),
+  product("catalog-05", "Papan Acrylic Modern Wedding 60x90cm", COMMERCIAL_CATEGORIES[0], 850000, acrylic, "Akrilik bening tebal 3mm, tripod kayu natural, dekorasi mawar & daun eucalyptus segar", ["wedding"], "non-food"),
+  product("catalog-06", "Papan Acrylic Grand Opening Gold Foil", COMMERCIAL_CATEGORIES[0], 950000, acrylic, "Cetak UV gold mirror pada akrilik tripod besi dengan bunga artificial & fresh premium", ["opening", "corporate"], "non-food"),
+  product("catalog-07", "Bunga Papan Kertas Ramah Lingkungan", COMMERCIAL_CATEGORIES[0], 550000, board, "Bahan papan daur ulang estetik bernuansa rustik minimalis", ["corporate"], "non-food"),
+  product("catalog-08", "Double-Decker Congratulatory Flower Stand (2 Tingkat)", COMMERCIAL_CATEGORIES[0], 1150000, standing, "Standing flower besi 2 susun mawar, lily, dan gerbera", ["opening", "corporate"], "non-food"),
+  product("catalog-09", "Standing Flower Modern Tripod Akrilik Duka Cita", COMMERCIAL_CATEGORIES[0], 780000, standing, "Standing akrilik dengan krisan putih, mawar putih, dan pita hitam elegan", ["duka"], "non-food"),
+  product("catalog-10", "Wreath Duka Cita Melingkar Anggrek & Lily", COMMERCIAL_CATEGORIES[0], 890000, standing, "Karangan melingkar simbol keabadian dengan bunga casablanca putih", ["duka"], "non-food"),
+  product("catalog-11", "Blush Rose & Lily Hand Bouquet", COMMERCIAL_CATEGORIES[1], 625000, bouquet, "Mawar blush pink, lily casablanca putih wangi, wrap sage green", ["romantic"], "non-food"),
+  product("catalog-12", "Everlasting 50 Red Roses Korean Style", COMMERCIAL_CATEGORIES[1], 750000, bouquet, "50 tangkai mawar merah segar bungkus gaya Korea matte hitam", ["romantic"], "non-food"),
+  product("catalog-13", "Pastel Hydrangea Dream Bouquet", COMMERCIAL_CATEGORIES[1], 480000, bouquet, "Bunga hortensia biru lembut berpadu baby breath dan gomphrena", ["romantic"], "non-food"),
+  product("catalog-14", "Sunflower & Cotton Graduation Special", COMMERCIAL_CATEGORIES[1], 350000, sunflower, "3 tangkai bunga matahari mekar, dried cotton, dan wrap navy", ["wisuda"], "non-food"),
+  product("catalog-15", "Blushing Peony & Ranunculus Luxe", COMMERCIAL_CATEGORIES[1], 680000, bouquet, "Koleksi peony premium dengan sentuhan pita satin champagne", ["romantic"], "non-food"),
+  product("catalog-16", "Holland Tulip Pastel Rainbow Wrap", COMMERCIAL_CATEGORIES[1], 820000, bouquet, "10 tangkai tulip impor Belanda nuansa gradasi soft pastel", ["romantic"], "non-food"),
+  product("catalog-17", "Surprise Bloom Box Drawer with Chocolate", COMMERCIAL_CATEGORIES[1], 550000, bloom, "Kotak bundar beludru bunga segar dengan laci bawah berisi cokelat. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-18", "Single Stem Sunflower Cone Wrap", COMMERCIAL_CATEGORIES[1], 120000, sunflower, "1 tangkai bunga matahari cerah praktis untuk apresiasi kelulusan", ["wisuda"], "non-food"),
+  product("catalog-19", "Ecuadorian Dark Purple Rose Velvet Box", COMMERCIAL_CATEGORIES[1], 690000, bouquet, "Mawar ungu tua Ekuador dalam kotak silinder suede hitam eksklusif", ["romantic"], "non-food"),
+  product("catalog-20", "White Casablanca & Blue Hydrangea Table Vase", COMMERCIAL_CATEGORIES[1], 520000, bouquet, "Rangkaian bunga segar di dalam vas keramik minimalis siap pajang", ["romantic"], "non-food"),
+  product("catalog-21", "Royal Fruit & Bird's Nest Wellness Hamper", COMMERCIAL_CATEGORIES[2], 980000, fruits, "Apel fuji, anggur autumn royal, jeruk sunkist, dan 3 botol sarang burung walet. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-22", "Lekas Sembuh Citrus & Tonic Basket", COMMERCIAL_CATEGORIES[2], 450000, fruits, "Jeruk navel, apel envy, kiwi gold, dan madu murni dalam keranjang rotan. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-23", "Japanese Muskmelon & Shine Muscat Elite Crate", COMMERCIAL_CATEGORIES[2], 1450000, fruits, "Melon jepang hidroponik aroma manis dan anggur shine muscat jepang. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-24", "Vitality Cold-Pressed Juice & Berry Basket", COMMERCIAL_CATEGORIES[2], 480000, fruits, "Campuran buah berry segar dan jus dingin alami tanpa gula. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-25", "Red Ruby Deluxe Fruit Basket", COMMERCIAL_CATEGORIES[2], 620000, fruits, "Delima merah impor, apel washington, plum hitam, dan buah pir packham. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-26", "Imported Orchard Crate with Sparkling Cider", COMMERCIAL_CATEGORIES[2], 620000, fruits, "Aneka buah pir & apel pilihan bersama jus apel berkarbonasi non-alkohol. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-27", "Organic Berry Medley & Manuka Honey Pot", COMMERCIAL_CATEGORIES[2], 750000, fruits, "Strawberry korea, blueberry organik, dan madu manuka asli. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-28", "Antioxidant Pomegranate & Pure Elixir", COMMERCIAL_CATEGORIES[2], 480000, fruits, "Delima segar, jeruk sunkist, dan seduhan teh herbal premium. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-29", "Gourmet Fruit & Wine Pairing Wooden Crate", COMMERCIAL_CATEGORIES[2], 1250000, wine, "Buah pir, anggur red globe, dan sebotol red wine impor. Tanpa label halal", ["well"], "non-halal"),
+  product("catalog-30", "Fresh Citrus Boost & Wellness Herbal Tonic", COMMERCIAL_CATEGORIES[2], 390000, fruits, "Aneka ragam jeruk manis kaya vitamin C dalam wadah anyaman bambu rapi. Makanan/minuman halal", ["well"], "halal"),
+  product("catalog-31", "Sage Celebration Basket", COMMERCIAL_CATEGORIES[3], 785000, fruits, "Sparkling juice buah non-alkohol, cokelat artisan, dan bunga kering. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-32", "Peach Rose Anniversary Box", COMMERCIAL_CATEGORIES[3], 650000, birthday, "Buket mawar peach, toples macaron manis, dan lilin aromaterapi santal. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-33", "Pastel Lilac Self-Care Hamper", COMMERCIAL_CATEGORIES[3], 385000, lilac, "Sabun organik botani, teh chamomile bunga, dan reed diffuser lavender. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-34", "Ruby Romance Velvet Box & Chocolates", COMMERCIAL_CATEGORIES[3], 740000, ruby, "Kotak beludru merah isi praline cokelat Belgia dan mawar merah. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-35", "Chandon Sparkling Wine & Luxury Truffles", COMMERCIAL_CATEGORIES[3], 1150000, wine, "Sparkling wine premium, truffle cokelat eropa, dan hiasan pita sage. Tanpa label halal", ["romantic"], "non-halal"),
+  product("catalog-36", "Vintage Red Wine & European Artisan Cheese Crate", COMMERCIAL_CATEGORIES[3], 1450000, wine, "Cabernet sauvignon vintage, keju gouda, dan crackers asin. Tanpa label halal", ["romantic"], "non-halal"),
+  product("catalog-37", "Moët Rosé & Silk Bathrobe Pamper Box", COMMERCIAL_CATEGORIES[3], 1850000, wine, "Champagne Moët Rosé, jubah sutra tidur, dan bath salt mawar. Tanpa label halal", ["romantic"], "non-food"),
+  product("catalog-38", "Artisan Belgian Praline & Liqueur Selection", COMMERCIAL_CATEGORIES[3], 680000, wine, "Koleksi cokelat truffle dengan isian liqueur khas Belgia. Tanpa label halal", ["romantic"], "non-halal"),
+  product("catalog-39", "Craft Beer & Savory Pretzels Celebration Tub", COMMERCIAL_CATEGORIES[3], 550000, wine, "Set beer kaleng impor dan camilan pretzel renyah dalam ember es dekoratif. Tanpa label halal", ["romantic"], "non-halal"),
+  product("catalog-40", "Sweet Blossom Macaron Tower", COMMERCIAL_CATEGORIES[3], 420000, macaron, "Menara 15 pcs macaron aneka rasa dipadukan bunga mawar segar di alasnya. Makanan/minuman halal", ["romantic"], "halal"),
+  product("catalog-41", "Parsel Fitri Zamrud", COMMERCIAL_CATEGORIES[4], 925000, eid, "Kurma safawi, nastar wijsman, kastengel, dan putri salju dalam hardbox hijau emas. Makanan/minuman halal", ["corporate"], "halal"),
+  product("catalog-42", "Hampers Lebaran Mini Berkah", COMMERCIAL_CATEGORIES[4], 450000, eid, "3 toples kue kering tradisional dan kurma pilihan untuk silaturahmi kerabat. Makanan/minuman halal", ["corporate"], "halal"),
+  product("catalog-43", "Emerald Eid Royal Feast", COMMERCIAL_CATEGORIES[4], 1150000, eid, "4 toples kaca kristal kue premium, sajadah beludru turki, dan kartu ucapan raya. Makanan/minuman halal", ["corporate"], "halal"),
+  product("catalog-44", "Safawi Date, Raw Honey & Spiced Tea Box", COMMERCIAL_CATEGORIES[4], 620000, eid, "Kurma kualitas super, madu randu mentah, dan racikan teh rempah alami. Makanan/minuman halal", ["corporate"], "halal"),
+  product("catalog-45", "Seserahan Akrilik Gold 7 Box (Bunga Terracotta)", COMMERCIAL_CATEGORIES[4], 3500000, wedding, "Set 7 kotak akrilik lis emas lengkap dekorasi bunga dan pita terracotta. Tanpa label halal", ["wedding"], "non-food"),
+  product("catalog-46", "Hantaran Mahar Al-Qur'an & Tasbih Kristal", COMMERCIAL_CATEGORIES[4], 1250000, wedding, "Box kayu akrilik isi Al-Qur'an mushaf cover cantik dan tasbih kristal. Tanpa label halal", ["wedding"], "non-food"),
+  product("catalog-47", "Little Bunny Newborn Organic Cotton Set", COMMERCIAL_CATEGORIES[4], 595000, newborn, "Pakaian bayi katun organik, boneka rajut kelinci, teether kayu, selimut lembut. Tanpa label halal", ["baby"], "non-food"),
+  product("catalog-48", "Executive Coffee Set", COMMERCIAL_CATEGORIES[4], 795000, coffee, "Kopi single-origin arabika, mug keramik handmade, dan tatakan kayu jati. Makanan/minuman halal", ["corporate"], "halal"),
+  product("catalog-49", "Executive Bordeaux Wine & Leather Desk Set", COMMERCIAL_CATEGORIES[4], 1650000, wine, "Red wine Bordeaux Prancis, tempat kartu kulit asli, dan buku agenda eksekutif. Tanpa label halal", ["corporate"], "non-halal"),
+  product("catalog-50", "Single Malt Scotch & Crystal Glass VIP Set", COMMERCIAL_CATEGORIES[4], 2400000, wine, "Scotch whisky premium dalam kotak kayu eksklusif beserta 2 gelas kristal. Tanpa label halal", ["corporate"], "non-halal"),
 ];
 export function migrateCommercialCatalog(products: Product[], version = 0) {
-  return version >= 1 ? products : [...products, ...COMMERCIAL_PRODUCTS.filter(p => !products.some(old => old.id === p.id))];
+  if (version >= COMMERCIAL_CATALOG_VERSION) return products;
+  const additions = COMMERCIAL_PRODUCTS.filter(p => !products.some(old => old.id === p.id || old.name === p.name));
+  return [...products, ...additions];
 }
 export const FLASH_SALES = [
-  { productId: 'commercial-sunflower', originalPrice: 339000 },
-  { productId: 'commercial-board-paper', originalPrice: 679000 },
-  { productId: 'commercial-fruit', originalPrice: 644000 },
+  { productId: 'catalog-14', originalPrice: 417000 },
+  { productId: 'catalog-07', originalPrice: 786000 },
+  { productId: 'catalog-22', originalPrice: 682000 },
 ];
 export function saleValues(price: number, originalPrice: number) {
   return { saving: Math.max(0, originalPrice - price), discount: Math.max(0, Math.round((1 - price / originalPrice) * 100)) };
@@ -80,7 +119,7 @@ export function dailyCountdown(now: Date) {
 export const OCCASIONS = [
   { id: 'duka', label: 'Duka Cita', image: standing }, { id: 'opening', label: 'Grand Opening', image: board },
   { id: 'wedding', label: 'Wedding', image: blush }, { id: 'wisuda', label: 'Wisuda', image: bouquet },
-  { id: 'romantic', label: 'Romantis & Anniv', image: bouquet }, { id: 'baby', label: 'Baby Born', image: blush },
+  { id: 'romantic', label: 'Romantis & Anniv', image: bouquet }, { id: 'baby', label: 'Baby Born', image: newborn },
   { id: 'well', label: 'Get Well Soon', image: fruits }, { id: 'corporate', label: 'Corporate Care', image: eid },
 ];
 export function matchesOccasion(p: Product, id: string) {
