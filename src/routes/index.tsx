@@ -69,21 +69,21 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
   };
   const badge = p.badge ?? (p.tags.includes("express") ? "Same-Day" : limited ? "Slot Terbatas" : "Ready Stock");
   return (
-    <article className="group overflow-hidden rounded-2xl border bg-card shadow-soft transition hover:-translate-y-1 hover:shadow-lift">
-      <div className="relative aspect-square overflow-hidden">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-soft transition hover:-translate-y-1 hover:shadow-lift">
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden">
         <img src={p.image} alt={p.name} loading="lazy" width={1024} height={1024} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-        <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium">{CATEGORY_EMOJI[p.category]} {p.category}</span>
-        <span className={cn("absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold", p.stock === 0 ? "bg-destructive text-destructive-foreground" : limited ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground")}>
+        <span title={p.category} className="absolute left-3 top-3 max-w-[calc(100%-7.5rem)] truncate rounded-full bg-card/90 px-2 py-1 text-[10px] font-medium">{CATEGORY_EMOJI[p.category]} {p.category}</span>
+        <span className={cn("absolute right-3 top-3 max-w-24 truncate rounded-full px-2 py-1 text-[10px] font-semibold", p.stock === 0 ? "bg-destructive text-destructive-foreground" : limited ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground")}>
           {p.stock === 0 ? "Habis" : badge}
         </span>
         {isHalalProduct(p) && <span aria-label="Halal" lang="ar" className="absolute bottom-3 left-3 rounded bg-halal-badge/85 px-2 py-0.5 font-serif text-lg leading-6 text-primary-foreground">حلال</span>}
       </div>
-      <div className="space-y-3 p-4">
-        <h3 className="font-serif text-xl leading-tight text-primary">{p.name}</h3>
-        <p className="line-clamp-2 text-sm text-muted-foreground">{p.description}</p>
-        <p className="text-lg font-semibold">{formatIDR(p.price)}</p>
-        {!isAdmin && <Button className="w-full" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>}
-        {!isAdmin && p.stock > 0 && <Button variant="outline" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={quickOrder}><MessageCircle className="mr-2 h-4 w-4" />Order WA</Button>}
+      <div className="flex flex-1 flex-col p-4">
+        <h3 title={p.name} className="min-h-[3.25rem] line-clamp-2 font-serif text-base font-medium leading-snug text-foreground">{p.name}</h3>
+        <p title={p.description} className="mb-3 min-h-[2.75rem] line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.description}</p>
+        <p className="mb-4 text-base font-bold text-foreground">{formatIDR(p.price)}</p>
+        {!isAdmin && <div className="mt-auto w-full space-y-2 pt-2"><Button className="h-10 w-full rounded-xl text-xs font-medium" onClick={onPick} disabled={p.stock === 0}>Kustomisasi & Pesan</Button>
+        <Button variant="outline" className="h-9 w-full gap-1.5 rounded-xl border-primary/30 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5" disabled={p.stock === 0} onClick={quickOrder}><MessageCircle className="h-4 w-4" />Order WA</Button></div>}
       </div>
     </article>
   );
@@ -129,8 +129,10 @@ function Index() {
 
   useEffect(() => {
     const h = (e: Event) => setPicked(products.find((p) => p.id === (e as CustomEvent).detail) ?? null);
+    const filter = (e: Event) => { setCat((e as CustomEvent<string>).detail); setOccasion(null); setBudget(null); setTab("all"); };
     window.addEventListener("kalandra:customize", h);
-    return () => window.removeEventListener("kalandra:customize", h);
+    window.addEventListener("kalandra:category", filter);
+    return () => { window.removeEventListener("kalandra:customize", h); window.removeEventListener("kalandra:category", filter); };
   }, [products]);
 
   const list = useMemo(

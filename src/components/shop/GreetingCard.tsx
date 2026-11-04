@@ -3,7 +3,7 @@ import { RIBBONS } from "@/lib/data";
 import { CARD_TEMPLATES } from "@/data/floristData";
 import { cn } from "@/lib/utils";
 
-export function GreetingCard({ to, from, message, ribbon, cardTemplate = "classic", className }: { to: string; from: string; message: string; ribbon: string; cardTemplate?: string; className?: string }) {
+export function GreetingCard({ to, from, message, ribbon, cardTemplate = "classic", className }: { to: string; from: string; message: string; ribbon: string; cardTemplate?: string | undefined; className?: string }) {
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
   return (
