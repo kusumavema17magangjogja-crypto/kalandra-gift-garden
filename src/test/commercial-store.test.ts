@@ -16,7 +16,7 @@ describe('Commercial storefront rules', () => {
   });
   it('keeps wine and champagne unlabelled, and badges explicit halal food', () => {
     for (const p of COMMERCIAL_PRODUCTS.filter(p => p.foodStatus === 'non-halal')) expect(isHalalProduct({ ...p, foodStatus: 'halal' })).toBe(false);
-    for (const p of COMMERCIAL_PRODUCTS.filter(p => p.foodStatus === 'halal')) expect(isHalalProduct(p)).toBe(true);
+    for (const p of COMMERCIAL_PRODUCTS.filter(p => p.foodStatus === 'halal')) expect(isHalalProduct(p), p.name).toBe(true);
   });
   it('resets at Jakarta midnight every 24 hours', () => {
     expect(dailyCountdown(new Date('2026-11-03T16:59:59Z'))).toBe('00:00:01');
