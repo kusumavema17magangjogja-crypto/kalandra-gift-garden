@@ -8,6 +8,9 @@ describe('Commercial storefront rules', () => {
     expect(ADDONS.find(a => a.id === id)?.price).toBe(price);
     expect(addonsTotal([String(id)])).toBe(price);
   });
+  it('gives every product its own distinct image', () => {
+    expect(new Set(COMMERCIAL_PRODUCTS.map(p => p.image)).size).toBe(50);
+  });
   it.each(COMMERCIAL_CATEGORIES)('has ten products in %s', category => {
     expect(COMMERCIAL_PRODUCTS.filter(p => p.category === category).length).toBe(10);
   });
