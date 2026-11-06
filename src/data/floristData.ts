@@ -134,8 +134,16 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
 ];
 export function migrateCommercialCatalog(products: Product[], version = 0) {
   if (version >= COMMERCIAL_CATALOG_VERSION) return products;
-  const additions = COMMERCIAL_PRODUCTS.filter(p => !products.some(old => old.id === p.id || old.name === p.name));
-  return [...products, ...additions];
+  // v3: refresh bundled (non-uploaded) photos of catalog items to their unique description-matched images.
+  const refreshed = version < 3
+    ? products.map(old => {
+        const fresh = COMMERCIAL_PRODUCTS.find(p => p.id === old.id);
+        if (!fresh || old.image?.startsWith("data:") || old.image?.startsWith("http")) return old;
+        return { ...old, image: fresh.image };
+      })
+    : products;
+  const additions = version < 2 ? COMMERCIAL_PRODUCTS.filter(p => !refreshed.some(old => old.id === p.id || old.name === p.name)) : [];
+  return [...refreshed, ...additions];
 }
 export const FLASH_SALES = [
   { productId: 'catalog-14', originalPrice: 417000 },
