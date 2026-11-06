@@ -76,7 +76,7 @@ export const CARD_TEMPLATES = [
 export const cardTemplateLabel = (id = 'classic') => CARD_TEMPLATES.find(t => t.id === id)?.label ?? CARD_TEMPLATES[0].label;
 export const CUSTOM_NOTE = 'Bisa Request Warna/Nuansa Bunga & Tulisan';
 export const COMMERCIAL_CATEGORIES = ["Papan Bunga & Papan Acrylic", "Hand Bouquet & Bloom Box", "Fresh & Healthy / Parsel Buah", "Birthday, Anniv & Luxury Hampers", "Lebaran, Seserahan, Baby Born & Corporate"] as const;
-export const COMMERCIAL_CATALOG_VERSION = 2;
+export const COMMERCIAL_CATALOG_VERSION = 3;
 function product(id: string, name: string, category: string, price: number, image: string, description: string, occasions: string[], foodStatus: Product["foodStatus"] = "non-food"): Product {
   return { id, name, category, price, image, description: `${description}. ${CUSTOM_NOTE}.`, occasions, foodStatus, stock: 10, active: true, tags: ["express"], rating: 5, reviews: 0 };
 }
