@@ -37,6 +37,13 @@ describe('Commercial storefront rules', () => {
     const migrated = migrateCommercialCatalog([]).filter(p => p.id !== 'catalog-22');
     expect(migrateCommercialCatalog(migrated, 2).some(p => p.id === 'catalog-22')).toBe(false);
   });
+  it('refreshes stale bundled photos of saved catalog items to their unique image', () => {
+    const first = COMMERCIAL_PRODUCTS[0]!;
+    const stale = { ...first, image: '/src/assets/old-shared.jpg', price: 111000 };
+    const [out] = migrateCommercialCatalog([stale], 2);
+    expect(out?.image).toBe(first.image);
+    expect(out?.price).toBe(111000);
+  });
   it.each([299999, 300000, 600000, 600001, 1000000, 1000001])('assigns price %s to exactly one budget', price => {
     expect(BUDGETS.filter(b => price >= b.min && price < b.max)).toHaveLength(1);
   });
