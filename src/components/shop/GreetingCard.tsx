@@ -1,6 +1,5 @@
 import { Leaf } from "lucide-react";
-import { RIBBONS } from "@/lib/data";
-import { CARD_TEMPLATES } from "@/data/floristData";
+import { RIBBONS, CARD_TEMPLATES } from "@/data/floristData";
 import { cn } from "@/lib/utils";
 
 // Very light ribbon colours (e.g. Ivory White) fall back to a readable tone for text.
@@ -10,13 +9,37 @@ const readable = (hex: string) => {
   return luminance > 0.8 ? "#7A7568" : hex;
 };
 
-export function GreetingCard({ to, from, message, ribbon, cardTemplate = "classic", className }: { to: string; from: string; message: string; ribbon: string; cardTemplate?: string | undefined; className?: string }) {
+export function GreetingCard({
+  to,
+  from,
+  message,
+  ribbon,
+  cardTemplate = "classic",
+  className,
+}: {
+  to: string;
+  from: string;
+  message: string;
+  ribbon: string;
+  cardTemplate?: string | undefined;
+  className?: string;
+}) {
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
+
   return (
-    <div className={cn("greeting-card relative overflow-hidden rounded-lg border bg-card-paper p-6 pt-10 shadow-lift", template.className, className)}>
+    <div
+      className={cn(
+        "greeting-card relative overflow-hidden rounded-lg border bg-card-paper p-6 pt-10 shadow-lift",
+        template?.className,
+        className
+      )}
+    >
       <div className="absolute inset-x-0 top-5 h-3" style={{ backgroundColor: r.hex }} />
-      <div className="absolute left-1/2 top-2 h-9 w-14 -translate-x-1/2 rounded-full border border-black/5" style={{ backgroundColor: r.hex }} />
+      <div
+        className="absolute left-1/2 top-2 h-9 w-14 -translate-x-1/2 rounded-full border border-black/5"
+        style={{ backgroundColor: r.hex }}
+      />
       <div className="mt-6 text-center">
         <Leaf className="mx-auto h-5 w-5 text-primary/60" />
         <p className="mt-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">Untuk</p>
@@ -28,7 +51,12 @@ export function GreetingCard({ to, from, message, ribbon, cardTemplate = "classi
         <p className="mt-5 text-xs uppercase tracking-[0.25em] text-muted-foreground">Dengan cinta,</p>
         <p className="font-serif text-xl text-accent">{from || "Nama Pengirim"}</p>
       </div>
-      <p className="mt-6 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Kalandra · Pita <span className="font-semibold" style={{ color: readable(r.hex) }}>{r.label}</span></p>
+      <p className="mt-6 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+        Kalandra · Pita{" "}
+        <span className="font-semibold" style={{ color: readable(r.hex) }}>
+          {r.label}
+        </span>
+      </p>
     </div>
   );
 }
