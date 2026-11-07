@@ -1,6 +1,6 @@
 import type { Product } from '@/lib/data';
 
-// 1. Papan Bunga & Standing Flower (Aset Karangan Jadi)
+// 1. Papan Bunga & Papan Acrylic
 import boardOpening from '@/assets/board-grand-opening.jpg';
 import boardWeddingTripod from '@/assets/acrylic-tripod.jpg';
 import boardAcrylicGold from '@/assets/acrylic-gold-opening.jpg';
@@ -107,7 +107,8 @@ export const COMMERCIAL_CATEGORIES = [
   "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-export const COMMERCIAL_CATALOG_VERSION = 300;
+// Versi 400 memaksa browser mereset localStorage katalog secara menyeluruh
+export const COMMERCIAL_CATALOG_VERSION = 400;
 
 function product(
   id: string, 
@@ -154,8 +155,8 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   // ==========================================
   // 2. Hand Bouquet & Standing Flower (10 Produk)
   // ==========================================
-  product("catalog-11", "Circle Floral Hoop Bridal Bouquet Trend", "Hand Bouquet & Standing Flower", 580000, "https://images.unsplash.com/photo-1519225438183-4700d7fb4734?w=800&auto=format&fit=crop&q=80", "Buket pengantin melingkar (hoop wedding bouquet) dengan susunan lili putih, mawar pastel, dan juntaian wisteria elegan", ["wedding", "romantic"], "non-food"),
-  product("catalog-12", "Jasminum Cascade Maroon Handbag Bouquet", "Hand Bouquet & Standing Flower", 650000, "https://images.unsplash.com/photo-1546842931-886c185b4c8c?w=800&auto=format&fit=crop&q=80", "Buket pengantin tas jinjing bulat mawar merah maroon dengan ronce melati menggantung wangi khas tradisi modern", ["wedding", "romantic"], "non-food"),
+  product("catalog-11", "Circle Floral Hoop Bridal Bouquet Trend", "Hand Bouquet & Standing Flower", 580000, "https://images.unsplash.com/photo-1522057384400-681b4223c538?w=800&auto=format&fit=crop&q=80", "Buket pengantin melingkar (hoop wedding bouquet) dengan susunan lili putih, mawar pastel, dan juntaian wisteria elegan", ["wedding", "romantic"], "non-food"),
+  product("catalog-12", "Jasminum Cascade Maroon Handbag Bouquet", "Hand Bouquet & Standing Flower", 650000, "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80", "Buket pengantin tas jinjing bulat mawar merah maroon dengan ronce melati menggantung wangi khas tradisi modern", ["wedding", "romantic"], "non-food"),
   product("catalog-13", "White Lily Cascade Wedding Hoop Bouquet", "Hand Bouquet & Standing Flower", 590000, "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&auto=format&fit=crop&q=80", "Buket hoop lingkaran anyam putih bersih dengan juntaian anggrek bulan dan pita sutra", ["wedding", "romantic"], "non-food"),
   product("catalog-14", "Lavender Wisteria Hanging Hoop Flower", "Hand Bouquet & Standing Flower", 550000, "https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=800&auto=format&fit=crop&q=80", "Buket lingkaran jinjing dengan kombinasi bunga mawar lilac ungu dan juntaian wisteria anggun", ["wedding", "romantic"], "non-food"),
   product("catalog-15", "Blush Rose & Lily Sage Wrap", "Hand Bouquet & Standing Flower", 625000, bouquetSage, "Buket bunga mawar blush pink dan lily putih dibungkus wrap sage green elegan", ["romantic"], "non-food"),
@@ -168,9 +169,9 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   // ==========================================
   // 3. Parsel & Hampers (10 Produk - Sehat & Nutrisi)
   // ==========================================
-  product("catalog-21", "Healthy Fitness & Whey Protein Snack Bouquet", "Parsel & Hampers", 520000, "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=800&auto=format&fit=crop&q=80", "Buket nutrisi berisi whey protein isolate sachet, rolled oat kaleng, selai kacang murni, dan protein bar", ["well"], "halal"),
+  product("catalog-21", "Healthy Fitness & Whey Protein Snack Bouquet", "Parsel & Hampers", 520000, "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80", "Buket nutrisi berisi rolled oat kemasan, protein bar pilihan, selai kacang murni, dan sari gandum", ["well"], "halal"),
   product("catalog-22", "Sunnah Wellness Herbal Hamper (Madu & Habbatussauda)", "Parsel & Hampers", 480000, "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=800&auto=format&fit=crop&q=80", "Keranjang rotan berisi madu randu mentah murni, minyak zaitun extra virgin, habbatussauda, dan sari kurma", ["well", "corporate"], "halal"),
-  product("catalog-23", "Immune Recovery Oat & Vitamin Crate", "Parsel & Hampers", 430000, "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80", "Paket pemulihan kesehatan berisi oat kaleng quaker, susu steril, sari lemon murni, dan madu jahe", ["well", "duka"], "halal"),
+  product("catalog-23", "Immune Recovery Oat & Vitamin Crate", "Parsel & Hampers", 430000, "https://images.unsplash.com/photo-1577401239170-897942555fb3?w=800&auto=format&fit=crop&q=80", "Paket pemulihan kesehatan berisi kaleng oat instan, susu steril beruang, sari lemon murni, dan madu jahe", ["well", "duka"], "halal"),
   product("catalog-24", "Superfood Chia & Granola Health Basket", "Parsel & Hampers", 475000, "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80", "Parsel sarapan sehat berisi rolled oat, organic chia seed, almond panggang, granola artisan, dan madu murni", ["well"], "halal"),
   product("catalog-25", "Royal Fruit & Bird's Nest Hamper", "Parsel & Hampers", 980000, fruitRoyal, "Keranjang rotan anyam berisi aneka buah segar pilihan dan 3 botol sarang burung walet", ["well", "duka"], "halal"),
   product("catalog-26", "Imported Orchard Crate with Sparkling Cider", "Parsel & Hampers", 620000, fruitMuscat, "Peti kayu berisi aneka buah pir, apel, dan botol jus sari buah berkarbonasi", ["well"], "halal"),
@@ -198,9 +199,9 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   // ==========================================
   product("catalog-41", "Little Bunny Newborn Organic Cotton Set", "Seserahan & Hantaran Pernikahan", 595000, babyNewborn, "Gift box bayi berisi pakaian katun organik, boneka rajut kelinci, dan teether kayu", ["baby"], "non-food"),
   product("catalog-42", "Deluxe Baby Spa & Care Basket Hamper", "Seserahan & Hantaran Pernikahan", 480000, "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=800&auto=format&fit=crop&q=80", "Keranjang anyam berisi sabun mandi bayi organik, lotion pelindung, handuk mikrofiber lembut, dan mainan", ["baby"], "non-food"),
-  product("catalog-43", "Welcome Little Prince Diaper & Balloon Cake", "Seserahan & Hantaran Pernikahan", 420000, "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80", "Rangkaian cake popok bertingkat nuansa baby blue dengan balon ucapan transparan dan kaos kaki rajut", ["baby"], "non-food"),
+  product("catalog-43", "Welcome Little Prince Diaper & Balloon Cake", "Seserahan & Hantaran Pernikahan", 420000, "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80", "Rangkaian perlengkapan bayi nuansa soft pastel dengan kaos kaki rajut, jumper katun, dan kotak kado rapi", ["baby"], "non-food"),
   product("catalog-44", "Newborn Vintage Suitcase Gift Box", "Seserahan & Hantaran Pernikahan", 680000, "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&auto=format&fit=crop&q=80", "Koper mini elegan berisi jumper rajut, selimut bedong katun, bandana, dan kartu pengingat milestone", ["baby"], "non-food"),
-  product("catalog-45", "Baby Girl Pastel Pink Elephant Basket", "Seserahan & Hantaran Pernikahan", 495000, "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=800&auto=format&fit=crop&q=80", "Keranjang rotan pink pastel lengkap dengan boneka gajah lembut, slabber makan, dan booties bayi", ["baby"], "non-food"),
+  product("catalog-45", "Baby Girl Pastel Pink Elephant Basket", "Seserahan & Hantaran Pernikahan", 495000, "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&auto=format&fit=crop&q=80", "Keranjang rotan pink pastel lengkap dengan boneka rajut lembut, slabber makan, dan booties bayi", ["baby"], "non-food"),
   product("catalog-46", "Seserahan Akrilik Gold 7 Box Set", "Seserahan & Hantaran Pernikahan", 3500000, seserahanGold, "Set 7 kotak seserahan akrilik bingkai emas dengan hiasan bunga dan pita terracotta", ["wedding"], "non-food"),
   product("catalog-47", "Hantaran Mahar Al-Qur'an & Tasbih Kristal", "Seserahan & Hantaran Pernikahan", 1250000, maharQuran, "Box mahar kayu akrilik isi Al-Qur'an mushaf cover cantik dan tasbih kristal", ["wedding"], "non-food"),
   product("catalog-48", "Emerald Eid Royal Feast Box", "Seserahan & Hantaran Pernikahan", 1150000, hamperEidRoyal, "Hardbox hijau zamrud isi 4 toples kaca kue kering premium, kurma, dan sajadah", ["corporate"], "halal"),
