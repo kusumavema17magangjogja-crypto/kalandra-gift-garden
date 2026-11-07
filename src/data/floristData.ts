@@ -110,7 +110,7 @@ export const COMMERCIAL_CATEGORIES = [
   "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-export const COMMERCIAL_CATALOG_VERSION = 40;
+export const COMMERCIAL_CATALOG_VERSION = 50;
 
 function product(
   id: string, 
