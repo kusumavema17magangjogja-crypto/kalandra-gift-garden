@@ -1,6 +1,6 @@
 import type { Product } from '@/lib/data';
 
-// 1. Papan Bunga & Standing Flower (Aset Karangan Jadi)
+// 1. Papan Bunga & Papan Acrylic
 import boardOpening from '@/assets/board-grand-opening.jpg';
 import boardWeddingTripod from '@/assets/acrylic-tripod.jpg';
 import boardAcrylicGold from '@/assets/acrylic-gold-opening.jpg';
@@ -18,7 +18,7 @@ import bloomBoxChoc from '@/assets/chocolate-bloom-box.jpg';
 import bloomBoxPurple from '@/assets/purple-rose-box.jpg';
 import peonyRanunculus from '@/assets/peony-ranunculus.jpg';
 
-// 3. Parsel & Hampers Buah & Makanan Sehat
+// 3. Parsel & Hampers Buah & Nutrisi Sehat
 import fruitRoyal from '@/assets/citrus-basket.jpg';
 import fruitMuscat from '@/assets/orchard-cider-crate.jpg';
 import fruitJuiceBasket from '@/assets/berry-juice-basket.jpg';
@@ -36,7 +36,7 @@ import hamperPraline from '@/assets/praline-liqueur.jpg';
 import hamperCoffee from '@/assets/coffee.jpg';
 import hamperBirthdayBox from '@/assets/birthday.jpg';
 
-// 5. Seserahan & Hantaran Pernikahan / Baby Born / Lebaran
+// 5. Seserahan, Hantaran, Baby Born & Corporate
 import seserahanGold from '@/assets/blush-seserahan.jpg';
 import maharQuran from '@/assets/mahar-quran.jpg';
 import babyNewborn from '@/assets/newborn.jpg';
@@ -47,7 +47,6 @@ import datesHoneyTea from '@/assets/dates-honey-tea.jpg';
 
 const unsplash = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
 
-// 25 Pilihan Warna Pita (Hex & Nama Tooltip)
 export const RIBBONS = [
   { id: 'emerald', label: 'Emerald Green', hex: '#1B3B2B' },
   { id: 'baby-blue', label: 'Baby Blue', hex: '#A0C4E2' },
@@ -85,7 +84,6 @@ export const ADDONS = [
   { id: 'graduation', label: 'Boneka Wisuda Mini', price: 35000 },
 ] as const;
 
-// 10 Model Desain Kartu Ucapan
 export const CARD_TEMPLATES = [
   { id: 'classic', label: 'Classic Floral', className: 'greeting-classic' },
   { id: 'gold', label: 'Gold Luxury Border', className: 'greeting-gold' },
@@ -104,7 +102,6 @@ export const cardTemplateLabel = (id = 'classic') =>
 
 export const CUSTOM_NOTE = 'Bisa Request Warna/Nuansa Bunga & Tulisan';
 
-// Kategori Resmi yang cocok dengan tombol filter di web
 export const COMMERCIAL_CATEGORIES = [
   "Papan Bunga & Papan Acrylic", 
   "Hand Bouquet & Standing Flower", 
@@ -113,8 +110,7 @@ export const COMMERCIAL_CATEGORIES = [
   "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-// Versi 30 agar browser langsung memuat data baru
-export const COMMERCIAL_CATALOG_VERSION = 30;
+export const COMMERCIAL_CATALOG_VERSION = 35;
 
 function product(
   id: string, 
@@ -205,7 +201,6 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-50", "Safawi Dates, Raw Honey & Spiced Tea Box", "Seserahan & Hantaran Pernikahan", 620000, datesHoneyTea, "Paket kurma safawi kualitas super, madu randu mentah, dan teh rempah alami", ["corporate"], "halal"),
 ];
 
-// FUNGSI PINTAR: Menghubungkan seluruh tombol filter lama & baru agar tidak ada tombol yang kosong
 export function matchProductCategory(productCategory: string, selectedFilter: string): boolean {
   if (!selectedFilter || selectedFilter === "all" || selectedFilter === "Semua Koleksi") return true;
   if (productCategory.toLowerCase().trim() === selectedFilter.toLowerCase().trim()) return true;
