@@ -10,10 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GreetingCard } from "./GreetingCard";
-import { ADDONS, RIBBONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
+import { ADDONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { CARD_TEMPLATES } from "@/data/floristData";
+import { CARD_TEMPLATES, RIBBONS } from "@/data/floristData";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX = 200;
@@ -31,8 +31,14 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   useEffect(() => {
     if (product) {
-      setTo(""); setFrom(user?.name.split(" ")[0] ?? ""); setMessage(""); setRibbon("emerald"); setCardTemplate("classic");
-      setDate(new Date(Date.now() + 864e5)); setAddons([]); setQty(1);
+      setTo("");
+      setFrom(user?.name.split(" ")[0] ?? "");
+      setMessage("");
+      setRibbon("emerald");
+      setCardTemplate("classic");
+      setDate(new Date(Date.now() + 864e5));
+      setAddons([]);
+      setQty(1);
     }
   }, [product, user]);
 
@@ -57,16 +63,25 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const order: Order = {
       id: "KLD-" + crypto.randomUUID(),
-      customerName: user?.name ?? from ?? "Pelanggan", customerEmail: user?.email ?? "guest@kalandra.id",
-      phone: user?.phone ?? "-", city, address: user?.address || "-",
+      customerName: user?.name ?? from ?? "Pelanggan",
+      customerEmail: user?.email ?? "guest@kalandra.id",
+      phone: user?.phone ?? "-",
+      city,
+      address: user?.address || "-",
       items: [{ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom }],
-      subtotal, shipping, total: subtotal + shipping,
-      status: "Menunggu Pembayaran", createdAt: new Date().toISOString(), deliveryDate: custom.deliveryDate,
+      subtotal,
+      shipping,
+      total: subtotal + shipping,
+      status: "Menunggu Pembayaran",
+      createdAt: new Date().toISOString(),
+      deliveryDate: custom.deliveryDate,
     };
     recordOrder(order);
     toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
     window.open(waLink(settings.whatsappNumber, buildWaMessage(product, custom, city)), "_blank", "noreferrer");
   };
+
+  const activeRibbon = RIBBONS.find((r) => r.id === ribbon) ?? RIBBONS[0];
 
   return (
     <Dialog open={!!product} onOpenChange={onOpenChange}>
@@ -77,43 +92,116 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <DialogTitle className="font-serif text-3xl text-primary">{product.name}</DialogTitle>
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
             </DialogHeader>
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label htmlFor="gift-to">Untuk (To)</Label><Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" /></div>
-              <div className="space-y-1.5"><Label htmlFor="gift-from">Dari (From)</Label><Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" /></div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between"><Label>Pesan Kartu Ucapan</Label><span className="text-xs text-muted-foreground">{message.length}/{MAX}</span></div>
-              <Textarea rows={4} maxLength={MAX} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Selamat ulang tahun…" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="card-template">Desain Kartu Ucapan</Label>
-              <Select value={cardTemplate} onValueChange={setCardTemplate}><SelectTrigger id="card-template"><SelectValue /></SelectTrigger><SelectContent>{CARD_TEMPLATES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent></Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Warna Pita</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {RIBBONS.map((r) => (
-                  <Button variant="outline" key={r.id} type="button" onClick={() => setRibbon(r.id)} aria-pressed={ribbon === r.id}
-                    className={cn("h-auto justify-start whitespace-normal p-2 text-sm transition", ribbon === r.id ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40")}>
-                    <span className="h-5 w-5 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: r.hex }} />{r.label}
-                  </Button>
-                ))}
+              <div className="space-y-1.5">
+                <Label htmlFor="gift-to">Untuk (To)</Label>
+                <Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="gift-from">Dari (From)</Label>
+                <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between">
+                <Label>Pesan Kartu Ucapan</Label>
+                <span className="text-xs text-muted-foreground">{message.length}/{MAX}</span>
+              </div>
+              <Textarea rows={4} maxLength={MAX} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Selamat ulang tahun…" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="card-template">Desain Kartu Ucapan</Label>
+              <Select value={cardTemplate} onValueChange={setCardTemplate}>
+                <SelectTrigger id="card-template">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARD_TEMPLATES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pilihan Warna Pita: Palet Bulat 25 Warna Tanpa Keterangan Teks Berderet */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Pilihan Warna Pita</Label>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {activeRibbon.label}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
+                {RIBBONS.map((r) => {
+                  const isSelected = ribbon === r.id;
+                  const isLight = ["ivory", "peach", "baby-blue", "silver"].includes(r.id);
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      title={r.label}
+                      onClick={() => setRibbon(r.id)}
+                      className={cn(
+                        "relative flex h-7 w-7 items-center justify-center rounded-full border border-black/10 shadow-sm transition-all duration-150",
+                        isSelected
+                          ? "scale-115 ring-2 ring-primary ring-offset-2 shadow-md"
+                          : "opacity-85 hover:scale-105 hover:opacity-100"
+                      )}
+                      style={{ backgroundColor: r.hex }}
+                    >
+                      {isSelected && (
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full",
+                            isLight ? "bg-black/80" : "bg-white"
+                          )}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-[1fr_auto] gap-3">
               <div className="space-y-1.5">
                 <Label>Tanggal Pengiriman</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start font-normal"><CalendarIcon className="mr-2 h-4 w-4" />{date ? formatDate(date.toISOString()) : "Pilih tanggal"}</Button>
+                    <Button variant="outline" className="w-full justify-start font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? formatDate(date.toISOString()) : "Pilih tanggal"}
+                    </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date(new Date().toDateString())} initialFocus className="p-3 pointer-events-auto" />
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(d) => d < new Date(new Date().toDateString())}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-1.5"><Label>Jumlah</Label><Input type="number" min={1} className="w-20" value={qty} onChange={(e) => setQty(Math.max(1, +e.target.value))} /></div>
+              <div className="space-y-1.5">
+                <Label>Jumlah</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-20"
+                  value={qty}
+                  onChange={(e) => setQty(Math.max(1, +e.target.value))}
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label>Add-ons</Label>
               {ADDONS.map((a) => (
@@ -127,17 +215,25 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               ))}
             </div>
           </div>
+
           <div className="flex flex-col gap-5 bg-secondary p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pratinjau Kartu Ucapan</p>
             <GreetingCard to={to} from={from} message={message} ribbon={ribbon} cardTemplate={cardTemplate} />
-            {!isAdmin && <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total ({qty}x)</span><span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span></div>
-              <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}><ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang</Button>
-              <Button variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={instantOrder}>
-                <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
-              </Button>
-              {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
-            </div>}
+            {!isAdmin && (
+              <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total ({qty}x)</span>
+                  <span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span>
+                </div>
+                <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}>
+                  <ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang
+                </Button>
+                <Button variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={instantOrder}>
+                  <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
+                </Button>
+                {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
