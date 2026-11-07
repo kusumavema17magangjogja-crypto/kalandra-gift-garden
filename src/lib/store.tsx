@@ -120,10 +120,13 @@ function useStoreValue() {
         const saved = JSON.parse(raw);
         const defaults = makeInitial();
         const settings = saved.settings ?? {};
-        const products = migrateCommercialCatalog(migrateFloristCatalog(saved.products ?? SEED_PRODUCTS, saved.floristCatalogVersion ?? 0), saved.commercialCatalogVersion ?? 0);
+        const commercialVersion = saved.commercialCatalogVersion ?? 0;
+        const products = migrateCommercialCatalog(migrateFloristCatalog(saved.products ?? SEED_PRODUCTS, saved.floristCatalogVersion ?? 0), commercialVersion);
+        const savedCats: string[] = saved.categories ?? (commercialVersion < 4 ? [] : [...CATEGORIES]);
+        const keptCats = commercialVersion < 4 ? savedCats.filter((c) => !(CATEGORIES as readonly string[]).includes(c)) : savedCats;
         setS({ ...defaults, ...saved, currentEmail: sessionStorage.getItem(SESSION_KEY),
           products, floristCatalogVersion: 1, commercialCatalogVersion: COMMERCIAL_CATALOG_VERSION,
-          categories: [...new Set([...(saved.categories ?? CATEGORIES), ...products.map((p: Product) => p.category)])] as string[],
+          categories: [...new Set([...keptCats, ...products.map((p: Product) => p.category)])] as string[],
           settings: { ...DEFAULT_SETTINGS, ...settings,
             storeName: !settings.storeName || ["Kalandra", "Kalandra Hampers & Seserahan"].includes(settings.storeName) ? DEFAULT_SETTINGS.storeName : settings.storeName,
             storeTagline: !settings.storeTagline || settings.storeTagline === "Hampers & Seserahan" ? DEFAULT_SETTINGS.storeTagline : settings.storeTagline,

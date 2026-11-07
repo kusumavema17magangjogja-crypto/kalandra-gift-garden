@@ -188,6 +188,9 @@
 .greeting-minimal .font-serif { font-family: var(--font-sans); font-style: normal; }
 .greeting-islamic { border: 6px double var(--primary); border-radius: 0; background-image: repeating-linear-gradient(45deg, transparent 0 14px, color-mix(in oklab, var(--primary) 6%, transparent) 14px 15px), repeating-linear-gradient(-45deg, transparent 0 14px, color-mix(in oklab, var(--primary) 6%, transparent) 14px 15px); }
 .greeting-islamic .font-serif { font-family: Georgia, serif; }
+.greeting-festive { border: 2px dashed var(--accent); background-image: radial-gradient(circle, color-mix(in oklab, var(--ribbon-gold) 60%, transparent) 1.6px, transparent 1.6px), radial-gradient(circle, color-mix(in oklab, var(--rose) 50%, transparent) 1.6px, transparent 1.6px), radial-gradient(circle, color-mix(in oklab, var(--primary) 40%, transparent) 1.6px, transparent 1.6px); background-size: 26px 26px, 34px 34px, 44px 44px; background-position: 0 0, 12px 18px, 22px 8px; }
+.greeting-romance { border: 3px solid color-mix(in oklab, var(--rose) 75%, white); background: color-mix(in oklab, var(--rose) 16%, var(--card-paper)); }
+.greeting-romance .font-serif { font-family: Georgia, serif; }
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none; }
   .notification-marquee { overflow-x: auto; }
