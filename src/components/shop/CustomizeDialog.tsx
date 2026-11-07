@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, MessageCircle, ShoppingBag } from "lucide-react";
+import { CalendarIcon, MessageCircle, ShoppingBag, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,16 @@ import { ADDONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatID
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CARD_TEMPLATES, RIBBONS } from "@/data/floristData";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX = 200;
+
+// 4 Desain kartu unggulan siap pilih langsung di pratinjau
+const FEATURED_CARDS = [
+  { id: "classic", label: "Classic", desc: "Floral Serif", border: "border-primary/40 bg-[#FDFBF7]" },
+  { id: "gold", label: "Gold", desc: "Luxury Border", border: "border-[#D4AF37] bg-[#FFFDF9]" },
+  { id: "minimal", label: "Minimal", desc: "Clean Sans", border: "border-neutral-400 bg-white" },
+  { id: "romance", label: "Romance", desc: "Blush Rose", border: "border-[#B76E79]/50 bg-[#FFF9F9]" },
+];
 
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
   const { addToCart, setCartOpen, city, settings, user, recordOrder, isAdmin } = useStore();
@@ -85,8 +92,9 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   return (
     <Dialog open={!!product} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto p-0">
         <div className="grid md:grid-cols-2">
+          {/* KOLOM KIRI: FORM DATA */}
           <div className="space-y-5 p-6">
             <DialogHeader>
               <DialogTitle className="font-serif text-3xl text-primary">{product.name}</DialogTitle>
@@ -109,26 +117,10 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 <Label>Pesan Kartu Ucapan</Label>
                 <span className="text-xs text-muted-foreground">{message.length}/{MAX}</span>
               </div>
-              <Textarea rows={4} maxLength={MAX} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Selamat ulang tahun…" />
+              <Textarea rows={3} maxLength={MAX} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Selamat ulang tahun…" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="card-template">Desain Kartu Ucapan</Label>
-              <Select value={cardTemplate} onValueChange={setCardTemplate}>
-                <SelectTrigger id="card-template">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARD_TEMPLATES.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Pilihan Warna Pita: Palet Bulat 25 Warna Tanpa Keterangan Teks Berderet */}
+            {/* PALET BULAT 25 WARNA PITA */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Pilihan Warna Pita</Label>
@@ -136,7 +128,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                   {activeRibbon.label}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
+              <div className="flex flex-wrap gap-2 rounded-xl border border-border/60 bg-muted/20 p-2.5">
                 {RIBBONS.map((r) => {
                   const isSelected = ribbon === r.id;
                   const isLight = ["ivory", "peach", "baby-blue", "silver"].includes(r.id);
@@ -216,9 +208,51 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
             </div>
           </div>
 
-          <div className="flex flex-col gap-5 bg-secondary p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pratinjau Kartu Ucapan</p>
+          {/* KOLOM KANAN: 4 PILIHAN DESAIN KARTU + PREVIEW INTERAKTIF */}
+          <div className="flex flex-col gap-4 bg-secondary/60 p-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Pilih Desain Kartu Ucapan
+                </p>
+                <span className="text-[11px] font-medium text-primary">
+                  {CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label}
+                </span>
+              </div>
+
+              {/* 4 MODEL KARTU INTERAKTIF */}
+              <div className="grid grid-cols-4 gap-2">
+                {FEATURED_CARDS.map((card) => {
+                  const isChosen = cardTemplate === card.id;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => setCardTemplate(card.id)}
+                      className={cn(
+                        "relative flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all duration-200",
+                        card.border,
+                        isChosen
+                          ? "ring-2 ring-primary ring-offset-1 shadow-sm font-semibold scale-[1.03]"
+                          : "opacity-75 hover:opacity-100 hover:border-primary/50"
+                      )}
+                    >
+                      {isChosen && (
+                        <div className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-white">
+                          <Check className="h-2.5 w-2.5" />
+                        </div>
+                      )}
+                      <span className="text-xs text-foreground font-serif">{card.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{card.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PREVIEW KARTU UTAMA */}
             <GreetingCard to={to} from={from} message={message} ribbon={ribbon} cardTemplate={cardTemplate} />
+
             {!isAdmin && (
               <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
                 <div className="flex justify-between text-sm">
