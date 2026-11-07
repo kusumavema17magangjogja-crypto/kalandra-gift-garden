@@ -18,7 +18,7 @@ import bloomBoxChoc from '@/assets/chocolate-bloom-box.jpg';
 import bloomBoxPurple from '@/assets/purple-rose-box.jpg';
 import peonyRanunculus from '@/assets/peony-ranunculus.jpg';
 
-// 3. Parsel & Hampers Buah & Nutrisi Sehat
+// 3. Parsel & Hampers Buah & Makanan Sehat
 import fruitRoyal from '@/assets/citrus-basket.jpg';
 import fruitMuscat from '@/assets/orchard-cider-crate.jpg';
 import fruitJuiceBasket from '@/assets/berry-juice-basket.jpg';
@@ -110,7 +110,7 @@ export const COMMERCIAL_CATEGORIES = [
   "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-export const COMMERCIAL_CATALOG_VERSION = 35;
+export const COMMERCIAL_CATALOG_VERSION = 40;
 
 function product(
   id: string, 
