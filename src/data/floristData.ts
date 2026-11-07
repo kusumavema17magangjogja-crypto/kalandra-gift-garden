@@ -110,8 +110,8 @@ export const COMMERCIAL_CATEGORIES = [
   "Lebaran, Seserahan, Baby Born & Corporate"
 ] as const;
 
-// Naikkan versi ke 8 agar memaksa local storage browser membersihkan duplikat & me-refresh momen
-export const COMMERCIAL_CATALOG_VERSION = 8;
+// Versi 10 untuk memaksa reset cache data lama di browser
+export const COMMERCIAL_CATALOG_VERSION = 10;
 
 function product(
   id: string, 
@@ -141,7 +141,7 @@ function product(
 }
 
 export const COMMERCIAL_PRODUCTS: Product[] = [
-  // 1. Papan Bunga & Papan Acrylic (Produk duka cita ditambah)
+  // 1. Papan Bunga & Papan Acrylic (Produk duka cita diperbanyak)
   product("catalog-01", "Standing Flower Krisan & Lily Duka Cita", COMMERCIAL_CATEGORIES[0], 600000, boardDuka, "Rangkaian standing flower besi bunga krisan & aster segar bernuansa putih hijau penghormatan", ["duka"], "non-food"),
   product("catalog-02", "Bunga Papan Duka Cita New Printing (2x1.25m)", COMMERCIAL_CATEGORIES[0], 650000, boardOpening, "Karangan bunga papan ucapan belasungkawa resmi bernuansa formal dan rapi", ["duka"], "non-food"),
   product("catalog-03", "Papan Acrylic Wedding Tripod Kayu", COMMERCIAL_CATEGORIES[0], 850000, boardWeddingTripod, "Akrilik bening di tripod kayu natural lengkap dengan dekorasi mawar & daun eucalyptus", ["wedding"], "non-food"),
@@ -159,7 +159,7 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-13", "Ecuadorian Dark Purple Rose Velvet Box", COMMERCIAL_CATEGORIES[1], 690000, bloomBoxPurple, "Mawar ungu tua Ekuador dalam kotak silinder suede hitam eksklusif", ["romantic"], "non-food"),
   product("catalog-14", "Blushing Peony & Ranunculus Luxe", COMMERCIAL_CATEGORIES[1], 680000, peonyRanunculus, "Koleksi bunga peony premium bernuansa pink lembut dengan sentuhan pita satin champagne", ["romantic", "wedding"], "non-food"),
 
-  // 3. Fresh & Healthy / Parsel Buah (Bisa untuk duka cita & get well soon)
+  // 3. Fresh & Healthy / Parsel Buah
   product("catalog-15", "Royal Fruit & Bird's Nest Hamper", COMMERCIAL_CATEGORIES[2], 980000, fruitRoyal, "Keranjang rotan anyam berisi aneka buah segar pilihan dan botol sarang burung walet", ["well", "duka"], "halal"),
   product("catalog-16", "Imported Orchard Crate with Sparkling Cider", COMMERCIAL_CATEGORIES[2], 620000, fruitMuscat, "Peti kayu berisi aneka buah pir, apel, dan botol jus sari buah berkarbonasi", ["well"], "halal"),
   product("catalog-17", "Vitality Cold-Pressed Juice & Berry Basket", COMMERCIAL_CATEGORIES[2], 480000, fruitJuiceBasket, "Parsel keranjang buah berry segar lengkap dengan botol jus dingin sehat", ["well"], "halal"),
@@ -186,6 +186,36 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-34", "Executive Green Leather & Notebook Gift Box", COMMERCIAL_CATEGORIES[4], 1150000, hamperCorporate, "Gift box hijau tua berisi notebook kulit premium, pulpen emas, dan kopi signature", ["corporate"], "non-food"),
   product("catalog-35", "Safawi Dates, Raw Honey & Spiced Tea Box", COMMERCIAL_CATEGORIES[4], 620000, datesHoneyTea, "Paket kurma safawi kualitas super, madu randu mentah, dan teh rempah alami", ["corporate"], "halal"),
 ];
+
+// FUNGSI PINTAR: Menghubungkan seluruh tombol filter (nama lama maupun baru) agar tidak kosong
+export function matchProductCategory(productCategory: string, selectedFilter: string): boolean {
+  if (!selectedFilter || selectedFilter === "all" || selectedFilter === "Semua Koleksi") return true;
+  if (productCategory.toLowerCase().trim() === selectedFilter.toLowerCase().trim()) return true;
+
+  const f = selectedFilter.toLowerCase();
+  const c = productCategory.toLowerCase();
+
+  // 1. Hand Bouquet & Standing Flower
+  if (f.includes("hand bouquet") && f.includes("standing")) {
+    return c.includes("hand bouquet") || c.includes("papan bunga");
+  }
+  // 2. Parsel & Hampers
+  if (f.includes("parsel") && f.includes("hampers")) {
+    return c.includes("parsel") || c.includes("hampers");
+  }
+  // 3. Seserahan & Hantaran
+  if (f.includes("seserahan") || f.includes("hantaran")) {
+    return c.includes("seserahan") || c.includes("corporate");
+  }
+  // 4. Kategori satuan lainnya
+  if (f.includes("hand bouquet")) return c.includes("hand bouquet");
+  if (f.includes("papan bunga") || f.includes("acrylic")) return c.includes("papan bunga");
+  if (f.includes("parsel") || f.includes("fresh")) return c.includes("parsel") || c.includes("fresh");
+  if (f.includes("birthday") || f.includes("luxury")) return c.includes("birthday") || c.includes("hampers");
+  if (f.includes("lebaran") || f.includes("corporate") || f.includes("baby")) return c.includes("lebaran") || c.includes("corporate");
+
+  return false;
+}
 
 export function migrateCommercialCatalog(products: Product[], version = 0) {
   if (version >= COMMERCIAL_CATALOG_VERSION && products.length === COMMERCIAL_PRODUCTS.length) {
