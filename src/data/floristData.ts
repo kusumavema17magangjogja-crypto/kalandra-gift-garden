@@ -1,7 +1,6 @@
 import type { Product } from '@/lib/data';
 
-// 1. Papan & Standing (Aset Karangan Jadi)
-import boardDuka from '@/assets/standing-flower.jpg';
+// 1. Papan Bunga & Papan Acrylic (Aset Karangan Jadi)
 import boardOpening from '@/assets/board-grand-opening.jpg';
 import boardWeddingTripod from '@/assets/acrylic-tripod.jpg';
 import boardAcrylicGold from '@/assets/acrylic-gold-opening.jpg';
@@ -9,16 +8,16 @@ import boardRustic from '@/assets/board-rustic-paper.jpg';
 import boardFlower from '@/assets/flower-board.jpg';
 import boardWeddingPastel from '@/assets/board-wedding-pastel.jpg';
 
-// 2. Buket & Vas (Aset Buket & Bunga Meja Jadi)
+// 2. Hand Bouquet & Standing Flower (Aset Buket & Standing Jadi)
+import boardDuka from '@/assets/standing-flower.jpg';
 import bouquetSage from '@/assets/rose-lily-bouquet.jpg';
 import bouquetRosesKorean from '@/assets/red-roses-korean.jpg';
 import bouquetHydrangea from '@/assets/hydrangea-pastel.jpg';
 import tableVase from '@/assets/casablanca-vase.jpg';
 import bloomBoxChoc from '@/assets/chocolate-bloom-box.jpg';
-import bloomBoxPurple from '@/assets/purple-rose-box.jpg';
 import peonyRanunculus from '@/assets/peony-ranunculus.jpg';
 
-// 3. Parsel Buah (Aset Parsel Keranjang Rapi)
+// 3. Parsel & Hampers (Aset Parsel Keranjang & Buah Rapi)
 import fruitRoyal from '@/assets/citrus-basket.jpg';
 import fruitMuscat from '@/assets/orchard-cider-crate.jpg';
 import fruitJuiceBasket from '@/assets/berry-juice-basket.jpg';
@@ -27,7 +26,7 @@ import fruitBamboo from '@/assets/citrus-bamboo.jpg';
 import fruitBerryHoney from '@/assets/berry-honey.jpg';
 import fruitGeneral from '@/assets/fruits.jpg';
 
-// 4. Hampers Ultah & Mewah (Aset Box Tertata Rapi)
+// 4. Birthday, Anniv & Luxury Hampers (Aset Box Mewah Jadi)
 import hamperPretzel from '@/assets/beer-pretzel-tub.jpg';
 import hamperMacaron from '@/assets/macaron.jpg';
 import hamperLilacSpa from '@/assets/lilac.jpg';
@@ -36,7 +35,7 @@ import hamperPraline from '@/assets/praline-liqueur.jpg';
 import hamperCoffee from '@/assets/coffee.jpg';
 import hamperBirthdayBox from '@/assets/birthday.jpg';
 
-// 5. Lebaran, Seserahan, Baby Born & Corporate (Aset Hantaran Rapi)
+// 5. Seserahan & Hantaran Pernikahan / Lebaran (Aset Hantaran Jadi)
 import hamperEidRoyal from '@/assets/eid-royal.jpg';
 import hamperEidMini from '@/assets/eid-mini.jpg';
 import seserahanGold from '@/assets/blush-seserahan.jpg';
@@ -102,16 +101,17 @@ export const cardTemplateLabel = (id = 'classic') =>
 
 export const CUSTOM_NOTE = 'Bisa Request Warna/Nuansa Bunga & Tulisan';
 
+// KATEGORI RESMI YANG MENYESUAIKAN PERSIS TOMBOL DI GAMBAR
 export const COMMERCIAL_CATEGORIES = [
   "Papan Bunga & Papan Acrylic", 
-  "Hand Bouquet & Bloom Box", 
-  "Fresh & Healthy / Parsel Buah", 
+  "Hand Bouquet & Standing Flower", 
+  "Parsel & Hampers", 
   "Birthday, Anniv & Luxury Hampers", 
-  "Lebaran, Seserahan, Baby Born & Corporate"
+  "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-// Versi 10 untuk memaksa reset cache data lama di browser
-export const COMMERCIAL_CATALOG_VERSION = 10;
+// Versi 12 agar browser langsung membuang cache lama
+export const COMMERCIAL_CATALOG_VERSION = 12;
 
 function product(
   id: string, 
@@ -141,25 +141,25 @@ function product(
 }
 
 export const COMMERCIAL_PRODUCTS: Product[] = [
-  // 1. Papan Bunga & Papan Acrylic (Produk duka cita diperbanyak)
-  product("catalog-01", "Standing Flower Krisan & Lily Duka Cita", COMMERCIAL_CATEGORIES[0], 600000, boardDuka, "Rangkaian standing flower besi bunga krisan & aster segar bernuansa putih hijau penghormatan", ["duka"], "non-food"),
-  product("catalog-02", "Bunga Papan Duka Cita New Printing (2x1.25m)", COMMERCIAL_CATEGORIES[0], 650000, boardOpening, "Karangan bunga papan ucapan belasungkawa resmi bernuansa formal dan rapi", ["duka"], "non-food"),
+  // 1. Papan Bunga & Papan Acrylic (7 Produk)
+  product("catalog-01", "Bunga Papan Duka Cita Printing (2x1.25m)", COMMERCIAL_CATEGORIES[0], 650000, boardOpening, "Karangan bunga papan ucapan belasungkawa resmi bernuansa formal dan rapi", ["duka"], "non-food"),
+  product("catalog-02", "Papan Grand Opening Mulia Sukses", COMMERCIAL_CATEGORIES[0], 650000, boardFlower, "Rangkaian bunga segar keliling dengan ucapan selamat cerah untuk peresmian kantor", ["opening", "corporate"], "non-food"),
   product("catalog-03", "Papan Acrylic Wedding Tripod Kayu", COMMERCIAL_CATEGORIES[0], 850000, boardWeddingTripod, "Akrilik bening di tripod kayu natural lengkap dengan dekorasi mawar & daun eucalyptus", ["wedding"], "non-food"),
   product("catalog-04", "Papan Acrylic Opening Gold Foil", COMMERCIAL_CATEGORIES[0], 950000, boardAcrylicGold, "Akrilik tripod besi dengan cetak gold mirror dan dekorasi bunga hiasan mewah", ["opening", "corporate"], "non-food"),
-  product("catalog-05", "Bunga Papan Kertas Ramah Lingkungan Duka Cita", COMMERCIAL_CATEGORIES[0], 550000, boardRustic, "Karangan papan bunga kertas bernuansa putih sage hening untuk ungkapan belasungkawa", ["duka", "corporate"], "non-food"),
-  product("catalog-06", "Bunga Papan Ucapan Selamat & Sukses", COMMERCIAL_CATEGORIES[0], 700000, boardFlower, "Karangan bunga papan warna semarak cerah untuk wisuda dan peresmian kantor", ["opening", "wisuda"], "non-food"),
+  product("catalog-05", "Bunga Papan Kertas Ramah Lingkungan", COMMERCIAL_CATEGORIES[0], 550000, boardRustic, "Karangan papan bunga kertas bernuansa putih sage hening untuk ungkapan belasungkawa", ["duka", "corporate"], "non-food"),
+  product("catalog-06", "Bunga Papan Ucapan Selamat & Wisuda", COMMERCIAL_CATEGORIES[0], 700000, boardFlower, "Karangan bunga papan warna semarak cerah untuk wisuda dan peresmian kantor", ["opening", "wisuda"], "non-food"),
   product("catalog-07", "Bunga Papan Happy Wedding Romansa Pastel", COMMERCIAL_CATEGORIES[0], 750000, boardWeddingPastel, "Karangan bunga papan pernikahan warna pastel mewah dengan hiasan suyok keliling", ["wedding"], "non-food"),
 
-  // 2. Hand Bouquet & Bloom Box (Buket & Vas Meja Duka Cita)
-  product("catalog-08", "Blush Rose & Lily Sage Wrap", COMMERCIAL_CATEGORIES[1], 625000, bouquetSage, "Buket bunga mawar blush pink dan lily putih dibungkus wrap sage green elegan", ["romantic"], "non-food"),
-  product("catalog-09", "Everlasting 50 Red Roses Korean", COMMERCIAL_CATEGORIES[1], 750000, bouquetRosesKorean, "Buket 50 tangkai mawar merah segar dibungkus gaya Korea matte hitam", ["romantic"], "non-food"),
-  product("catalog-10", "Pastel Hydrangea Dream Bouquet", COMMERCIAL_CATEGORIES[1], 480000, bouquetHydrangea, "Buket bunga hortensia biru lembut berpadu baby breath dan gomphrena", ["romantic", "wisuda"], "non-food"),
-  product("catalog-11", "Surprise Bloom Box Drawer with Chocolate", COMMERCIAL_CATEGORIES[1], 550000, bloomBoxChoc, "Bloom box bulat beludru warna pink dengan laci bawah berisi cokelat praline", ["romantic"], "halal"),
-  product("catalog-12", "White Casablanca Condolence Table Vase", COMMERCIAL_CATEGORIES[1], 520000, tableVase, "Rangkaian bunga casablanca putih murni dalam vas keramik untuk simpati duka cita & rumah duka", ["duka", "well"], "non-food"),
-  product("catalog-13", "Ecuadorian Dark Purple Rose Velvet Box", COMMERCIAL_CATEGORIES[1], 690000, bloomBoxPurple, "Mawar ungu tua Ekuador dalam kotak silinder suede hitam eksklusif", ["romantic"], "non-food"),
+  // 2. Hand Bouquet & Standing Flower (7 Produk - Sesuai Tombol Gambar)
+  product("catalog-08", "Standing Flower Krisan & Lily Duka Cita", COMMERCIAL_CATEGORIES[1], 600000, boardDuka, "Rangkaian standing flower besi bunga krisan & aster segar bernuansa putih hijau penghormatan", ["duka"], "non-food"),
+  product("catalog-09", "Blush Rose & Lily Sage Wrap", COMMERCIAL_CATEGORIES[1], 625000, bouquetSage, "Buket bunga mawar blush pink dan lily putih dibungkus wrap sage green elegan", ["romantic"], "non-food"),
+  product("catalog-10", "Everlasting 50 Red Roses Korean Style", COMMERCIAL_CATEGORIES[1], 750000, bouquetRosesKorean, "Buket 50 tangkai mawar merah segar dibungkus gaya Korea matte hitam", ["romantic"], "non-food"),
+  product("catalog-11", "Pastel Hydrangea Dream Bouquet", COMMERCIAL_CATEGORIES[1], 480000, bouquetHydrangea, "Buket bunga hortensia biru lembut berpadu baby breath dan gomphrena", ["romantic", "wisuda"], "non-food"),
+  product("catalog-12", "Surprise Bloom Box Drawer with Chocolate", COMMERCIAL_CATEGORIES[1], 550000, bloomBoxChoc, "Bloom box bulat beludru warna pink dengan laci bawah berisi cokelat praline", ["romantic"], "halal"),
+  product("catalog-13", "White Casablanca Condolence Table Vase", COMMERCIAL_CATEGORIES[1], 520000, tableVase, "Rangkaian bunga casablanca putih murni dalam vas keramik untuk simpati duka cita & rumah duka", ["duka", "well"], "non-food"),
   product("catalog-14", "Blushing Peony & Ranunculus Luxe", COMMERCIAL_CATEGORIES[1], 680000, peonyRanunculus, "Koleksi bunga peony premium bernuansa pink lembut dengan sentuhan pita satin champagne", ["romantic", "wedding"], "non-food"),
 
-  // 3. Fresh & Healthy / Parsel Buah
+  // 3. Parsel & Hampers (7 Produk - Sesuai Tombol Gambar)
   product("catalog-15", "Royal Fruit & Bird's Nest Hamper", COMMERCIAL_CATEGORIES[2], 980000, fruitRoyal, "Keranjang rotan anyam berisi aneka buah segar pilihan dan botol sarang burung walet", ["well", "duka"], "halal"),
   product("catalog-16", "Imported Orchard Crate with Sparkling Cider", COMMERCIAL_CATEGORIES[2], 620000, fruitMuscat, "Peti kayu berisi aneka buah pir, apel, dan botol jus sari buah berkarbonasi", ["well"], "halal"),
   product("catalog-17", "Vitality Cold-Pressed Juice & Berry Basket", COMMERCIAL_CATEGORIES[2], 480000, fruitJuiceBasket, "Parsel keranjang buah berry segar lengkap dengan botol jus dingin sehat", ["well"], "halal"),
@@ -168,7 +168,7 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-20", "Organic Berry Medley & Manuka Honey Pot", COMMERCIAL_CATEGORIES[2], 750000, fruitBerryHoney, "Keranjang berisi aneka buah berry segar dan jar madu manuka asli", ["well"], "halal"),
   product("catalog-21", "Lekas Sembuh Citrus & Tonic Basket", COMMERCIAL_CATEGORIES[2], 450000, fruitGeneral, "Keranjang buah pilihan jeruk navel, kiwi gold, dan madu murni", ["well"], "halal"),
 
-  // 4. Birthday, Anniv & Luxury Hampers
+  // 4. Birthday, Anniv & Luxury Hampers (7 Produk)
   product("catalog-22", "Craft Beer & Savory Pretzels Celebration Tub", COMMERCIAL_CATEGORIES[3], 550000, hamperPretzel, "Ember es dekoratif berisi bir kaleng impor dan camilan pretzel renyah. Tanpa label halal", ["romantic"], "non-halal"),
   product("catalog-23", "Sweet Blossom Macaron Tower & Roses", COMMERCIAL_CATEGORIES[3], 420000, hamperMacaron, "Menara 15 pcs macaron aneka rasa warna-warni dipadu bunga mawar di alasnya", ["romantic"], "halal"),
   product("catalog-24", "Pastel Lilac Botanical Spa Hamper", COMMERCIAL_CATEGORIES[3], 385000, hamperLilacSpa, "Gift box lilac isi sabun organik botani, teh chamomile, dan aroma lavender", ["romantic"], "halal"),
@@ -177,8 +177,8 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-27", "Executive Coffee Drip & Ceramic Set", COMMERCIAL_CATEGORIES[3], 795000, hamperCoffee, "Kemasan box kayu eksklusif kopi single-origin, mug keramik, dan coaster", ["corporate"], "halal"),
   product("catalog-28", "Peach Rose Anniversary Flower & Candle Box", COMMERCIAL_CATEGORIES[3], 650000, hamperBirthdayBox, "Buket mawar peach, lilin aromaterapi wangi santal, dan macaron renyah", ["romantic"], "halal"),
 
-  // 5. Lebaran, Seserahan, Baby Born & Corporate
-  product("catalog-29", "Emerald Eid Royal Feast", COMMERCIAL_CATEGORIES[4], 1150000, hamperEidRoyal, "Hardbox hijau zamrud isi 4 toples kaca kue kering premium, kurma, dan sajadah beludru", ["corporate"], "halal"),
+  // 5. Seserahan & Hantaran Pernikahan (7 Produk - Sesuai Tombol Gambar)
+  product("catalog-29", "Emerald Eid Royal Feast Box", COMMERCIAL_CATEGORIES[4], 1150000, hamperEidRoyal, "Hardbox hijau zamrud isi 4 toples kaca kue kering premium, kurma, dan sajadah beludru", ["corporate"], "halal"),
   product("catalog-30", "Hampers Lebaran Mini Berkah", COMMERCIAL_CATEGORIES[4], 450000, hamperEidMini, "Paket hemat toples kue kering nastar, kastengel, dan kurma pilihan", ["corporate"], "halal"),
   product("catalog-31", "Seserahan Akrilik Gold 7 Box", COMMERCIAL_CATEGORIES[4], 3500000, seserahanGold, "Set 7 kotak seserahan akrilik bingkai emas dengan hiasan bunga dan pita terracotta", ["wedding"], "non-food"),
   product("catalog-32", "Hantaran Mahar Al-Qur'an & Tasbih Kristal", COMMERCIAL_CATEGORIES[4], 1250000, maharQuran, "Box mahar kayu akrilik isi Al-Qur'an mushaf cover cantik dan tasbih kristal", ["wedding"], "non-food"),
@@ -187,7 +187,7 @@ export const COMMERCIAL_PRODUCTS: Product[] = [
   product("catalog-35", "Safawi Dates, Raw Honey & Spiced Tea Box", COMMERCIAL_CATEGORIES[4], 620000, datesHoneyTea, "Paket kurma safawi kualitas super, madu randu mentah, dan teh rempah alami", ["corporate"], "halal"),
 ];
 
-// FUNGSI PINTAR: Menghubungkan seluruh tombol filter (nama lama maupun baru) agar tidak kosong
+// FUNGSI PINTAR: Menghubungkan seluruh tombol filter lama & baru agar tidak ada tombol yang kosong
 export function matchProductCategory(productCategory: string, selectedFilter: string): boolean {
   if (!selectedFilter || selectedFilter === "all" || selectedFilter === "Semua Koleksi") return true;
   if (productCategory.toLowerCase().trim() === selectedFilter.toLowerCase().trim()) return true;
@@ -195,24 +195,21 @@ export function matchProductCategory(productCategory: string, selectedFilter: st
   const f = selectedFilter.toLowerCase();
   const c = productCategory.toLowerCase();
 
-  // 1. Hand Bouquet & Standing Flower
-  if (f.includes("hand bouquet") && f.includes("standing")) {
+  if (f.includes("hand bouquet") || f.includes("standing") || f.includes("bloom box")) {
     return c.includes("hand bouquet") || c.includes("papan bunga");
   }
-  // 2. Parsel & Hampers
-  if (f.includes("parsel") && f.includes("hampers")) {
-    return c.includes("parsel") || c.includes("hampers");
+  if (f.includes("parsel") || f.includes("fresh") || (f.includes("hampers") && !f.includes("birthday"))) {
+    return c.includes("parsel") || c.includes("fresh");
   }
-  // 3. Seserahan & Hantaran
-  if (f.includes("seserahan") || f.includes("hantaran")) {
-    return c.includes("seserahan") || c.includes("corporate");
+  if (f.includes("seserahan") || f.includes("hantaran") || f.includes("lebaran") || f.includes("corporate")) {
+    return c.includes("seserahan") || c.includes("lebaran") || c.includes("corporate");
   }
-  // 4. Kategori satuan lainnya
-  if (f.includes("hand bouquet")) return c.includes("hand bouquet");
-  if (f.includes("papan bunga") || f.includes("acrylic")) return c.includes("papan bunga");
-  if (f.includes("parsel") || f.includes("fresh")) return c.includes("parsel") || c.includes("fresh");
-  if (f.includes("birthday") || f.includes("luxury")) return c.includes("birthday") || c.includes("hampers");
-  if (f.includes("lebaran") || f.includes("corporate") || f.includes("baby")) return c.includes("lebaran") || c.includes("corporate");
+  if (f.includes("papan bunga") || f.includes("acrylic")) {
+    return c.includes("papan bunga");
+  }
+  if (f.includes("birthday") || f.includes("luxury")) {
+    return c.includes("birthday") || c.includes("luxury");
+  }
 
   return false;
 }
