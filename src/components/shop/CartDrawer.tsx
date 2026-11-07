@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/lib/store";
 import { ADDONS, buildCartWaMessage, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS, waLink } from "@/lib/data";
-import { cn } from "@/lib/utils";
 import { cardTemplateLabel } from "@/data/floristData";
 // Ribbon colours come from catalog data (hex), not theme classes.
 

@@ -157,8 +157,8 @@ export function isHalalProduct(p: Product): boolean {
   if (p.foodStatus !== "halal") return false;
   const contents = `${p.name} ${p.description}`;
   if (/wine|bir\b|beer|champagne|sampanye|liqueur|whisk[ey]+|scotch|non[- ]?halal|pork|babi|bacon|\bham\b/i.test(contents)) return false;
-  if (/seserahan|hantaran|standing|bunga papan|papan bunga|papan acrylic|akrilik|acrylic/i.test(contents)) return false;
-  return !/hand bouquet|buket|wreath|wrap|peony|tulip|table vase|rose velvet|roses korean|hydrangea dream|graduation special|newborn/i.test(p.name);
+  if (/seserahan|hantaran|standing|papan|akrilik|acrylic/i.test(contents)) return false;
+  return !/hand bouquet|buket|wreath|wrap|peony|tulip|table vase|rose velvet|roses korean|hydrangea dream|graduation|newborn/i.test(p.name);
 }
 
 export const FLORIST_ADDITIONS: Product[] = [
