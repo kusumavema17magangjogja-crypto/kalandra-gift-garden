@@ -49,10 +49,13 @@ describe('Commercial storefront rules', () => {
     const custom = { ...COMMERCIAL_PRODUCTS[0]!, id: 'p1700000000000', name: 'Kreasi Admin', image: 'https://example.com/custom.jpg' };
     const retired = { ...COMMERCIAL_PRODUCTS[0]!, id: 'p3', name: 'Parsel Fitri Lama' };
     const oldCatalog = { ...COMMERCIAL_PRODUCTS[0]!, id: 'catalog-30', name: 'Produk Katalog Lama' };
-    const migrated = migrateCommercialCatalog([custom, retired, oldCatalog], 3);
+    const oldItems = COMMERCIAL_PRODUCTS.map(p => ({ ...p, name: 'Versi Lama ' + p.id, image: '/old-shared.jpg' }));
+    const migrated = migrateCommercialCatalog([custom, retired, oldCatalog, ...oldItems], 3);
     expect(migrated.find(p => p.id === custom.id)).toEqual(custom);
     expect(migrated.some(p => p.id === 'p3' || p.id === 'catalog-30')).toBe(false);
-    expect(migrated.filter(p => p.id.startsWith('catalog-'))).toHaveLength(25);
+    const catalog = migrated.filter(p => p.id.startsWith('catalog-'));
+    expect(catalog).toHaveLength(25);
+    for (const p of catalog) expect(p.name).toBe(COMMERCIAL_PRODUCTS.find(f => f.id === p.id)?.name);
   });
   it('does not resurrect catalog items deleted before the migration', () => {
     const without = COMMERCIAL_PRODUCTS.filter(p => p.id !== 'catalog-07');
