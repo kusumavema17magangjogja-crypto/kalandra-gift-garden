@@ -95,7 +95,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 {RIBBONS.map((r) => (
                   <Button variant="outline" key={r.id} type="button" onClick={() => setRibbon(r.id)} aria-pressed={ribbon === r.id}
                     className={cn("h-auto justify-start whitespace-normal p-2 text-sm transition", ribbon === r.id ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40")}>
-                    <span className={cn("h-5 w-5 rounded-full", r.className)} />{r.label}
+                    <span className="h-5 w-5 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: r.hex }} />{r.label}
                   </Button>
                 ))}
               </div>
