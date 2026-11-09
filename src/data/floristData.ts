@@ -108,8 +108,8 @@ export const COMMERCIAL_CATEGORIES = [
   "Seserahan & Hantaran Pernikahan"
 ] as const;
 
-// Versi 1500 agar browser langsung memuat 40 produk baru
-export const COMMERCIAL_CATALOG_VERSION = 1500;
+// Versi 2000 untuk reset tuntas cache browser
+export const COMMERCIAL_CATALOG_VERSION = 2000;
 
 function product(
   id: string, 
@@ -140,69 +140,64 @@ function product(
 
 export const COMMERCIAL_PRODUCTS: Product[] = [
   // ==========================================
-  // 1. Papan Bunga & Papan Acrylic (8 Produk)
+  // 1. Papan Bunga & Papan Acrylic (8 Produk - Gambar Unik)
   // ==========================================
   product("catalog-01", "Bunga Papan Duka Cita Printing (2x1.25m)", "Papan Bunga & Papan Acrylic", 650000, boardOpening, "Karangan bunga papan ucapan belasungkawa resmi bernuansa formal dan rapi", ["duka"], "non-food"),
   product("catalog-02", "Papan Grand Opening Mulia Sukses", "Papan Bunga & Papan Acrylic", 650000, boardFlower, "Rangkaian bunga segar keliling dengan ucapan selamat cerah untuk peresmian kantor", ["opening", "corporate"], "non-food"),
   product("catalog-03", "Papan Acrylic Wedding Tripod Kayu", "Papan Bunga & Papan Acrylic", 850000, boardWeddingTripod, "Akrilik bening di tripod kayu natural lengkap dengan dekorasi mawar & daun eucalyptus", ["wedding"], "non-food"),
   product("catalog-04", "Papan Acrylic Opening Gold Foil", "Papan Bunga & Papan Acrylic", 950000, boardAcrylicGold, "Akrilik tripod besi dengan cetak gold mirror dan dekorasi bunga hiasan mewah", ["opening", "corporate"], "non-food"),
   product("catalog-05", "Bunga Papan Kertas Ramah Lingkungan Duka Cita", "Papan Bunga & Papan Acrylic", 550000, boardRustic, "Karangan papan bunga kertas bernuansa putih sage hening untuk ungkapan belasungkawa", ["duka", "corporate"], "non-food"),
-  // TAMBAHAN PRODUK PAPAN BARU:
   product("catalog-06", "Bunga Papan Happy Wedding Romansa Pastel", "Papan Bunga & Papan Acrylic", 750000, boardWeddingPastel, "Karangan bunga papan pernikahan warna pastel mewah dengan hiasan suyok keliling", ["wedding"], "non-food"),
-  product("catalog-07", "Bunga Papan Wisuda & Kelulusan Akrilik Tripod", "Papan Bunga & Papan Acrylic", 750000, boardWeddingTripod, "Papan akrilik tripod kayu ucapan selamat kelulusan/wisuda dengan dekorasi bunga segar", ["wisuda", "opening"], "non-food"),
-  product("catalog-08", "Bunga Papan Duka Cita Elegan Rest In Peace", "Papan Bunga & Papan Acrylic", 800000, boardRustic, "Karangan papan bunga belasungkawa bernuansa putih emas dengan bunga lily segar", ["duka"], "non-food"),
+  product("catalog-07", "Bunga Papan Wisuda Akrilik Tripod Modern", "Papan Bunga & Papan Acrylic", 750000, "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80", "Papan akrilik tripod modern bertuliskan ucapan kelulusan dan dekorasi bunga segar", ["wisuda", "opening"], "non-food"),
+  product("catalog-08", "Bunga Papan Duka Cita Elegan Rest In Peace", "Papan Bunga & Papan Acrylic", 800000, "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&auto=format&fit=crop&q=80", "Karangan papan bunga belasungkawa ukuran besar bertingkat nuansa putih hijau khidmat", ["duka"], "non-food"),
 
   // ==========================================
-  // 2. Hand Bouquet & Standing Flower (8 Produk)
+  // 2. Hand Bouquet & Standing Flower (8 Produk - Gambar Unik)
   // ==========================================
   product("catalog-09", "Blush Rose & Lily Sage Wrap", "Hand Bouquet & Standing Flower", 625000, bouquetSage, "Buket bunga mawar blush pink dan lily putih dibungkus wrap sage green elegan", ["romantic"], "non-food"),
   product("catalog-10", "Everlasting 50 Red Roses Korean Style", "Hand Bouquet & Standing Flower", 750000, bouquetRosesKorean, "Buket 50 tangkai mawar merah segar dibungkus gaya Korea matte hitam", ["romantic"], "non-food"),
   product("catalog-11", "Pastel Hydrangea Dream Bouquet", "Hand Bouquet & Standing Flower", 480000, bouquetHydrangea, "Buket bunga hortensia biru lembut berpadu baby breath dan gomphrena", ["romantic", "wisuda"], "non-food"),
   product("catalog-12", "White Casablanca Condolence Table Vase", "Hand Bouquet & Standing Flower", 520000, tableVase, "Rangkaian bunga casablanca putih murni dalam vas keramik untuk simpati duka cita & rumah duka", ["duka", "well"], "non-food"),
   product("catalog-13", "Standing Flower Krisan Penghormatan Duka Cita", "Hand Bouquet & Standing Flower", 600000, boardDuka, "Rangkaian standing flower besi bunga krisan & aster segar bernuansa putih hijau penghormatan", ["duka"], "non-food"),
-  // TAMBAHAN BUKET BARU (Wisuda, Duka Cita & Mawar):
-  product("catalog-14", "Graduation Sunflower & Hydrangea Bouquet", "Hand Bouquet & Standing Flower", 450000, bouquetHydrangea, "Buket bunga wisuda cerah perpaduan hortensia biru, aster, dan pita kelulusan", ["wisuda"], "non-food"),
-  product("catalog-15", "Standing Flower Belasungkawa Lily Putih Bertingkat", "Hand Bouquet & Standing Flower", 850000, boardDuka, "Standing flower dua susun mewah bernuansa putih hening untuk rumah duka", ["duka"], "non-food"),
+  product("catalog-14", "Graduation Sunflower & Cotton Bouquet", "Hand Bouquet & Standing Flower", 450000, "https://images.unsplash.com/photo-1597848212624-a19eb35e2651?w=800&auto=format&fit=crop&q=80", "Buket bunga matahari cerah dipadu dried cotton dan pita kelulusan biru navy", ["wisuda"], "non-food"),
+  product("catalog-15", "Standing Flower Belasungkawa Lily Bertingkat", "Hand Bouquet & Standing Flower", 850000, "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&auto=format&fit=crop&q=80", "Standing flower 2 tingkat bernuansa putih murni lili dan mawar untuk rumah duka", ["duka"], "non-food"),
   product("catalog-16", "Blushing Peony & Ranunculus Luxe Bouquet", "Hand Bouquet & Standing Flower", 680000, peonyRanunculus, "Koleksi buket bunga peony premium warna pink peach dengan pita satin champagne", ["romantic", "wisuda"], "non-food"),
 
   // ==========================================
-  // 3. Parsel & Hampers Buah / Pemulihan (8 Produk)
+  // 3. Parsel & Hampers Buah / Pemulihan (8 Produk - Gambar Unik)
   // ==========================================
   product("catalog-17", "Royal Fruit & Bird's Nest Hamper", "Parsel & Hampers", 980000, fruitRoyal, "Keranjang rotan anyam berisi aneka buah segar pilihan dan 3 botol sarang burung walet", ["well", "duka"], "halal"),
   product("catalog-18", "Imported Orchard Crate with Sparkling Cider", "Parsel & Hampers", 620000, fruitMuscat, "Peti kayu berisi aneka buah pir, apel, dan botol jus sari buah berkarbonasi", ["well"], "halal"),
   product("catalog-19", "Vitality Cold-Pressed Juice & Fresh Fruit Basket", "Parsel & Hampers", 480000, fruitJuiceBasket, "Parsel keranjang buah segar lengkap dengan botol jus dingin sehat tanpa gula", ["well"], "halal"),
   product("catalog-20", "Red Ruby Deluxe Fruit Basket", "Parsel & Hampers", 620000, fruitRubyBasket, "Parsel keranjang buah delima merah, apel washington, dan plum berhias pita satin", ["well"], "halal"),
   product("catalog-21", "Fresh Citrus Boost & Wellness Herbal Tonic", "Parsel & Hampers", 390000, fruitBamboo, "Aneka jeruk segar manis dalam wadah anyaman bambu rapi dan higienis", ["well"], "halal"),
-  // TAMBAHAN PARSEL BARU (Duka Cita & Get Well Soon):
-  product("catalog-22", "Hampers Buah Simpati Duka Cita Putih Asri", "Parsel & Hampers", 550000, fruitGeneral, "Parsel buah segar pilihan bernuansa pita putih lembut untuk kunjungan duka cita", ["duka", "well"], "halal"),
-  product("catalog-23", "Organic Berry & Madu Murni Lekas Pulih", "Parsel & Hampers", 680000, fruitBerryHoney, "Keranjang buah berry kaya antioksidan lengkap dengan toples madu murni", ["well"], "halal"),
-  product("catalog-24", "Deluxe Orchard Family Fruit Basket", "Parsel & Hampers", 750000, fruitRoyal, "Keranjang buah super lengkap anggur muscat, pir impor, dan jeruk navel manis", ["well", "corporate"], "halal"),
+  product("catalog-22", "Hampers Buah Simpati Duka Cita Putih Asri", "Parsel & Hampers", 550000, fruitGeneral, "Parsel buah segar pilihan bernuansa pita putih lembut untuk kunjungan belasungkawa", ["duka", "well"], "halal"),
+  product("catalog-23", "Organic Berry & Madu Murni Lekas Pulih", "Parsel & Hampers", 680000, fruitBerryHoney, "Keranjang buah berry segar dipadu toples madu manuka asli untuk pemulihan kesehatan", ["well"], "halal"),
+  product("catalog-24", "Deluxe Muscat Grape & Pear Orchard Crate", "Parsel & Hampers", 750000, "https://images.unsplash.com/photo-1546548970-71785318a17b?w=800&auto=format&fit=crop&q=80", "Peti kayu buah premium berisi anggur shine muscat hijau, pir madu, dan apel fuji", ["well", "corporate"], "halal"),
 
   // ==========================================
-  // 4. Birthday, Anniv & Luxury Hampers (8 Produk)
+  // 4. Birthday, Anniv & Luxury Hampers (8 Produk - Gambar Unik)
   // ==========================================
   product("catalog-25", "Surprise Bloom Box Drawer with Chocolate", "Birthday, Anniv & Luxury Hampers", 550000, bloomBoxChoc, "Bloom box bulat beludru warna pink dengan laci bawah berisi cokelat praline", ["romantic"], "halal"),
   product("catalog-26", "Sweet Blossom Macaron Tower & Roses", "Birthday, Anniv & Luxury Hampers", 420000, hamperMacaron, "Menara 15 pcs macaron aneka rasa warna-warni dipadu bunga mawar di alasnya", ["romantic", "wisuda"], "halal"),
   product("catalog-27", "Pastel Lilac Botanical Spa Hamper", "Birthday, Anniv & Luxury Hampers", 385000, hamperLilacSpa, "Gift box lilac isi sabun organik botani, teh chamomile, dan aroma lavender", ["romantic"], "halal"),
   product("catalog-28", "Moët Rosé & Silk Bathrobe Pamper Box", "Birthday, Anniv & Luxury Hampers", 1850000, hamperRoseBath, "Boks mewah berisi sampanye Moët Rosé, jubah sutra tidur, dan bath salt mawar", ["romantic"], "non-halal"),
   product("catalog-29", "Craft Beer & Savory Pretzels Celebration Tub", "Birthday, Anniv & Luxury Hampers", 550000, hamperPretzel, "Ember es dekoratif berisi bir kaleng impor dan camilan pretzel renyah", ["romantic"], "non-halal"),
-  // TAMBAHAN LUXURY & GRADUATION HAMPERS BARU:
-  product("catalog-30", "Belgian Pralines & Luxury Truffle Box", "Birthday, Anniv & Luxury Hampers", 650000, hamperPraline, "Koleksi cokelat praline Belgia artisan dalam boks hardbox pita emas", ["romantic", "wisuda"], "non-halal"),
-  product("catalog-31", "Artisan Coffee Drip & Ceramic Mug Crate", "Birthday, Anniv & Luxury Hampers", 695000, hamperCoffee, "Set seduh kopi arabika single origin, mug keramik estetik, dan biskuit", ["corporate", "wisuda"], "halal"),
+  product("catalog-30", "Belgian Pralines & Luxury Truffle Box", "Birthday, Anniv & Luxury Hampers", 650000, hamperPraline, "Koleksi cokelat praline Belgia artisan dalam boks hardbox eksklusif berpita emas", ["romantic", "wisuda"], "non-halal"),
+  product("catalog-31", "Artisan Coffee Drip & Ceramic Mug Crate", "Birthday, Anniv & Luxury Hampers", 695000, hamperCoffee, "Set seduh kopi arabika single origin, mug keramik estetik, dan biskuit artisan", ["corporate", "wisuda"], "halal"),
   product("catalog-32", "Royal Velvet Rose Bloom Box Ungu Elegan", "Birthday, Anniv & Luxury Hampers", 580000, bloomBoxPurple, "Kotak silinder beludru hitam eksklusif dengan mawar ungu tua tahan lama", ["romantic"], "non-food"),
 
   // ==========================================
-  // 5. Seserahan, Hantaran & Momen Spesial (8 Produk)
+  // 5. Seserahan, Hantaran & Momen Spesial (8 Produk - Gambar Unik)
   // ==========================================
   product("catalog-33", "Little Bunny Newborn Organic Cotton Set", "Seserahan & Hantaran Pernikahan", 595000, babyNewborn, "Gift box bayi berisi pakaian katun organik, boneka rajut kelinci, dan teether kayu", ["baby"], "non-food"),
   product("catalog-34", "Seserahan Akrilik Gold 7 Box Set", "Seserahan & Hantaran Pernikahan", 3500000, seserahanGold, "Set 7 kotak seserahan akrilik bingkai emas dengan hiasan bunga dan pita terracotta", ["wedding"], "non-food"),
   product("catalog-35", "Hantaran Mahar Al-Qur'an & Tasbih Kristal", "Seserahan & Hantaran Pernikahan", 1250000, maharQuran, "Box mahar kayu akrilik isi Al-Qur'an mushaf cover cantik dan tasbih kristal", ["wedding"], "non-food"),
   product("catalog-36", "Emerald Eid Royal Feast Box", "Seserahan & Hantaran Pernikahan", 1150000, hamperEidRoyal, "Hardbox hijau zamrud isi 4 toples kaca kue kering premium, kurma, dan sajadah", ["corporate"], "halal"),
   product("catalog-37", "Safawi Dates, Raw Honey & Spiced Tea Box", "Seserahan & Hantaran Pernikahan", 620000, datesHoneyTea, "Paket kurma safawi kualitas super, madu randu mentah, dan teh rempah alami", ["corporate"], "halal"),
-  // TAMBAHAN HANTARAN / CORPORATE BARU:
   product("catalog-38", "Hampers Lebaran Nastar & Kastengel Toples Kaca", "Seserahan & Hantaran Pernikahan", 450000, hamperEidMini, "Boks hantaran toples kaca kue kering nastar wisman dan kastengel gurih", ["corporate"], "halal"),
-  product("catalog-39", "Executive Leather Notebook & Pen Corporate Hamper", "Seserahan & Hantaran Pernikahan", 890000, hamperCorporate, "Set hadiah eksekutif buku catatan kulit, pena eksklusif, dan tumbler tahan panas", ["corporate", "wisuda"], "non-food"),
-  product("catalog-40", "Deluxe Baby Milestone Keepsake Box", "Seserahan & Hantaran Pernikahan", 520000, babyNewborn, "Hampers kelahiran bayi berisi selimut bedong katun jepang, sarung tangan, dan kartu ucapan", ["baby"], "non-food"),
+  product("catalog-39", "Executive Leather Notebook Corporate Hamper", "Seserahan & Hantaran Pernikahan", 890000, hamperCorporate, "Set hadiah eksekutif buku catatan kulit, pena eksklusif, dan tumbler tahan panas", ["corporate", "wisuda"], "non-food"),
+  product("catalog-40", "Deluxe Baby Milestone Keepsake Box", "Seserahan & Hantaran Pernikahan", 520000, "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=800&auto=format&fit=crop&q=80", "Keranjang anyam hampers bayi berisi lotion organik, handuk mikrofiber lembut, dan mainan", ["baby"], "non-food"),
 ];
 
 export function matchProductCategory(productCategory: string, selectedFilter: string): boolean {
