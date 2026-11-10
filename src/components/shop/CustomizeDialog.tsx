@@ -26,7 +26,7 @@ const FEATURED_CARDS = [
 ];
 
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
-  const { addToCart, setCartOpen, city, settings, user, recordOrder, isAdmin } = useStore();
+  const { addToCart, setCartOpen, city, settings, user, recordOrder } = useStore();
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
   const [senderAddress, setSenderAddress] = useState("");
@@ -66,7 +66,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   };
 
   const add = () => {
-    if (isAdmin) return;
     if (!to.trim() || !from.trim() || !date) {
       return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
     }
@@ -85,7 +84,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   };
 
   const instantOrder = () => {
-    if (isAdmin) return;
     if (!to.trim() || !from.trim() || !date) {
       return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
     }
@@ -124,7 +122,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   return (
     <Dialog open={!!product} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto p-0">
         <div className="grid md:grid-cols-2">
           {/* KOLOM KIRI: FORM DATA */}
           <div className="space-y-4 p-6">
@@ -155,7 +153,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 id="sender-address"
                 value={senderAddress}
                 onChange={(e) => setSenderAddress(e.target.value)}
-                placeholder="Contoh: Jl. Kaliurang Km 5, Sleman, Yogyakarta"
+                placeholder="Contoh: Jl. Sukun Raya No.98, Banguntapan, Bantul, DIY"
               />
             </div>
 
@@ -255,73 +253,80 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
             </div>
           </div>
 
-          {/* KOLOM KANAN: 4 PILIHAN DESAIN KARTU + PREVIEW INTERAKTIF */}
-          <div className="flex flex-col gap-4 bg-secondary/60 p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Pilih Desain Kartu Ucapan
-                </p>
-                <span className="text-[11px] font-medium text-primary">
-                  {CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label}
-                </span>
+          {/* KOLOM KANAN: PREVIEW & TOMBOL BELANJA */}
+          <div className="flex flex-col justify-between gap-4 bg-secondary/60 p-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Pilih Desain Kartu Ucapan
+                  </p>
+                  <span className="text-[11px] font-medium text-primary">
+                    {CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {FEATURED_CARDS.map((card) => {
+                    const isChosen = cardTemplate === card.id;
+                    return (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => setCardTemplate(card.id)}
+                        className={cn(
+                          "relative flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all duration-200",
+                          card.border,
+                          isChosen
+                            ? "ring-2 ring-primary ring-offset-1 shadow-sm font-semibold scale-[1.03]"
+                            : "opacity-75 hover:opacity-100 hover:border-primary/50"
+                        )}
+                      >
+                        {isChosen && (
+                          <div className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-white">
+                            <Check className="h-2.5 w-2.5" />
+                          </div>
+                        )}
+                        <span className="text-xs text-foreground font-serif">{card.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{card.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* 4 MODEL KARTU INTERAKTIF */}
-              <div className="grid grid-cols-4 gap-2">
-                {FEATURED_CARDS.map((card) => {
-                  const isChosen = cardTemplate === card.id;
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => setCardTemplate(card.id)}
-                      className={cn(
-                        "relative flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all duration-200",
-                        card.border,
-                        isChosen
-                          ? "ring-2 ring-primary ring-offset-1 shadow-sm font-semibold scale-[1.03]"
-                          : "opacity-75 hover:opacity-100 hover:border-primary/50"
-                      )}
-                    >
-                      {isChosen && (
-                        <div className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-white">
-                          <Check className="h-2.5 w-2.5" />
-                        </div>
-                      )}
-                      <span className="text-xs text-foreground font-serif">{card.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{card.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* PREVIEW KARTU DENGAN ALAMAT */}
+              <GreetingCard
+                to={to}
+                from={from}
+                senderAddress={senderAddress}
+                message={message}
+                ribbon={ribbon}
+                cardTemplate={cardTemplate}
+              />
             </div>
 
-            {/* PREVIEW KARTU UTAMA LENGKAP DENGAN PROPS ALAMAT */}
-            <GreetingCard
-              to={to}
-              from={from}
-              senderAddress={senderAddress}
-              message={message}
-              ribbon={ribbon}
-              cardTemplate={cardTemplate}
-            />
-
-            {!isAdmin && (
-              <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total ({qty}x)</span>
-                  <span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span>
-                </div>
-                <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}>
-                  <ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang
-                </Button>
-                <Button variant="outline" size="lg" className="w-full border-success text-success hover:bg-success/10 hover:text-success" onClick={instantOrder}>
-                  <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
-                </Button>
-                {!settings.storeOpen && <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>}
+            {/* CONTAINER TOMBOL: SELALU TAMPIL TANPA CEK ADMIN */}
+            <div className="mt-4 space-y-3 rounded-xl border bg-card p-4 shadow-soft">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Total ({qty}x)</span>
+                <span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span>
               </div>
-            )}
+              <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}>
+                <ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full border-success text-success hover:bg-success/10 hover:text-success"
+                onClick={instantOrder}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
+              </Button>
+              {!settings.storeOpen && (
+                <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
