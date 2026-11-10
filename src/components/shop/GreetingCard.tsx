@@ -29,7 +29,7 @@ export function GreetingCard({
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
 
-  // Buat URL Google Maps search otomatis dari alamat yang diinput
+  // URL Google Maps search otomatis dari alamat yang diinput
   const mapsUrl = senderAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(senderAddress)}`
     : "#";
@@ -117,7 +117,7 @@ export function GreetingCard({
           </p>
         </div>
 
-        {/* Pengirim & Alamat (Bisa Diklik Langsung ke Google Maps) */}
+        {/* Pengirim & Alamat Lengkap */}
         <div className="mt-3 pt-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/75">
             Warmest Regards From
@@ -126,18 +126,23 @@ export function GreetingCard({
             {from || "Nama Pengirim"}
           </p>
 
+          {/* Alamat Lengkap: Tanpa Truncate, Multi-line Rapi, dan Dapat Diklik ke Maps */}
           {senderAddress && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Buka lokasi di Google Maps"
-              className="group mx-auto mt-1.5 inline-flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-primary/20 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
-            >
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
-              <span className="truncate underline decoration-dotted underline-offset-2">{senderAddress}</span>
-              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-            </a>
+            <div className="mx-auto mt-2 w-full max-w-sm px-2">
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buka rute pengiriman di Google Maps"
+                className="group flex items-start justify-center gap-1.5 rounded-xl border border-primary/20 bg-white/90 p-2 text-left text-xs text-foreground/85 shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
+              >
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
+                <span className="flex-1 whitespace-normal break-words leading-snug">
+                  {senderAddress}
+                </span>
+                <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+              </a>
+            </div>
           )}
         </div>
       </div>
