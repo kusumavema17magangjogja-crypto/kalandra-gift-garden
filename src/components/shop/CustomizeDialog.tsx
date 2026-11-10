@@ -67,7 +67,9 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   const add = () => {
     if (isAdmin) return;
-    if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+    if (!to.trim() || !from.trim() || !date) {
+      return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+    }
     const error = addToCart({
       key: crypto.randomUUID(),
       productId: product.id,
@@ -84,7 +86,9 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   const instantOrder = () => {
     if (isAdmin) return;
-    if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+    if (!to.trim() || !from.trim() || !date) {
+      return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+    }
     const subtotal = total;
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const order: Order = {
@@ -93,7 +97,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       customerEmail: user?.email ?? "guest@kalandra.id",
       phone: user?.phone ?? "-",
       city,
-      address: senderAddress || user?.address || "-",
+      address: senderAddress.trim() || user?.address || "-",
       items: [
         {
           key: crypto.randomUUID(),
