@@ -50,11 +50,10 @@ const REVIEWS = [
 ];
 
 function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
-  const { settings, recordOrder, user, city, isAdmin } = useStore();
+  const { settings, recordOrder, user, city } = useStore();
   const limited = p.stock <= 5;
 
   const quickOrder = () => {
-    if (isAdmin) return;
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const item = {
       key: crypto.randomUUID(),
@@ -151,27 +150,25 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
           </p>
         </div>
 
-        {/* CONTAINER TOMBOL: SELALU TAMPIL DAN PASTI TERLIHAT */}
-        {!isAdmin && (
-          <div className="mt-4 flex w-full flex-col gap-2 pt-2">
-            <Button
-              className="h-10 w-full rounded-xl text-xs font-semibold shadow-xs"
-              onClick={onPick}
-              disabled={p.stock === 0}
-            >
-              Kustomisasi & Pesan
-            </Button>
-            <Button
-              variant="outline"
-              className="h-9 w-full gap-1.5 rounded-xl border-primary/30 text-xs font-semibold text-primary hover:border-primary hover:bg-primary/5"
-              disabled={p.stock === 0}
-              onClick={quickOrder}
-            >
-              <MessageCircle className="h-4 w-4" />
-              Order WA
-            </Button>
-          </div>
-        )}
+        {/* TOMBOL SELALU MUNCUL SECARA PERMANEN */}
+        <div className="mt-4 flex w-full flex-col gap-2 pt-2">
+          <Button
+            className="h-10 w-full rounded-xl text-xs font-semibold shadow-xs"
+            onClick={onPick}
+            disabled={p.stock === 0}
+          >
+            Kustomisasi & Pesan
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 w-full gap-1.5 rounded-xl border-primary/30 text-xs font-semibold text-primary hover:border-primary hover:bg-primary/5"
+            disabled={p.stock === 0}
+            onClick={quickOrder}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Order WA
+          </Button>
+        </div>
       </div>
     </article>
   );
