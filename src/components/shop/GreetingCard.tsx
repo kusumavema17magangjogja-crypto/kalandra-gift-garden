@@ -1,4 +1,4 @@
-import { Leaf, Sparkles, Heart, MapPin } from "lucide-react";
+import { Leaf, Sparkles, Heart, MapPin, ExternalLink } from "lucide-react";
 import { RIBBONS, CARD_TEMPLATES } from "@/data/floristData";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,11 @@ export function GreetingCard({
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
 
+  // Buat URL Google Maps search otomatis dari alamat yang diinput
+  const mapsUrl = senderAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(senderAddress)}`
+    : "#";
+
   return (
     <div
       className={cn(
@@ -58,11 +63,11 @@ export function GreetingCard({
         <Sparkles className="h-4 w-4 text-white/90 drop-shadow animate-pulse" />
       </div>
 
-      {/* Bingkai Ganda Dekoratif Cantik */}
+      {/* Bingkai Ganda Dekoratif */}
       <div className="pointer-events-none absolute inset-3 rounded-xl border border-dashed border-primary/25" />
       <div className="pointer-events-none absolute inset-4 rounded-lg border border-primary/10" />
 
-      {/* Ornamen Bunga Sudut (Corner Florals) */}
+      {/* Ornamen Bunga Sudut */}
       <div className="pointer-events-none absolute left-5 top-7 text-primary/30 text-xs font-serif select-none">
         ❀ ───
       </div>
@@ -76,10 +81,10 @@ export function GreetingCard({
         ─── ❀
       </div>
 
-      {/* Watermark Daun Transparan di Latar Belakang */}
+      {/* Watermark Daun Transparan */}
       <Leaf className="pointer-events-none absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 text-primary/[0.03] select-none" />
 
-      {/* Isi Kartu */}
+      {/* Konten Kartu */}
       <div className="relative z-10 mt-2 text-center">
         {/* Header Icon */}
         <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shadow-inner">
@@ -112,7 +117,7 @@ export function GreetingCard({
           </p>
         </div>
 
-        {/* Pengirim & Alamat */}
+        {/* Pengirim & Alamat (Bisa Diklik Langsung ke Google Maps) */}
         <div className="mt-3 pt-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/75">
             Warmest Regards From
@@ -121,12 +126,18 @@ export function GreetingCard({
             {from || "Nama Pengirim"}
           </p>
 
-          {/* Menampilkan Alamat Pengirim jika diisi */}
           {senderAddress && (
-            <p className="mx-auto mt-1 flex max-w-xs items-center justify-center gap-1 text-[11px] font-medium text-muted-foreground/90">
-              <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
-              <span className="truncate">{senderAddress}</span>
-            </p>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Buka lokasi di Google Maps"
+              className="group mx-auto mt-1.5 inline-flex max-w-xs items-center justify-center gap-1.5 rounded-full border border-primary/20 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
+            >
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
+              <span className="truncate underline decoration-dotted underline-offset-2">{senderAddress}</span>
+              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+            </a>
           )}
         </div>
       </div>
