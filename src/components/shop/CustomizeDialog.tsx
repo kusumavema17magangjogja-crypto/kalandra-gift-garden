@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, MessageCircle, ShoppingBag, Check } from "lucide-react";
+import { CalendarIcon, MessageCircle, ShoppingBag, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const { addToCart, setCartOpen, city, settings, user, recordOrder, isAdmin } = useStore();
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
+  const [senderAddress, setSenderAddress] = useState("");
   const [message, setMessage] = useState("");
   const [ribbon, setRibbon] = useState("emerald");
   const [cardTemplate, setCardTemplate] = useState("classic");
@@ -40,6 +41,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     if (product) {
       setTo("");
       setFrom(user?.name.split(" ")[0] ?? "");
+      setSenderAddress(user?.address ?? "");
       setMessage("");
       setRibbon("emerald");
       setCardTemplate("classic");
@@ -51,12 +53,29 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   if (!product) return null;
   const total = (product.price + addonsTotal(addons)) * qty;
-  const custom = { to, from, message, ribbon, cardTemplate, deliveryDate: date?.toISOString() ?? "", addons, qty };
+  const custom = {
+    to,
+    from,
+    senderAddress,
+    message,
+    ribbon,
+    cardTemplate,
+    deliveryDate: date?.toISOString() ?? "",
+    addons,
+    qty,
+  };
 
   const add = () => {
     if (isAdmin) return;
     if (!to || !from || !date) return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
-    const error = addToCart({ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom });
+    const error = addToCart({
+      key: crypto.randomUUID(),
+      productId: product.id,
+      name: product.name,
+      image: product.image,
+      basePrice: product.price,
+      ...custom,
+    });
     if (error) return void toast.error(error);
     toast.success("Ditambahkan ke keranjang");
     onOpenChange(false);
@@ -74,8 +93,17 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       customerEmail: user?.email ?? "guest@kalandra.id",
       phone: user?.phone ?? "-",
       city,
-      address: user?.address || "-",
-      items: [{ key: crypto.randomUUID(), productId: product.id, name: product.name, image: product.image, basePrice: product.price, ...custom }],
+      address: senderAddress || user?.address || "-",
+      items: [
+        {
+          key: crypto.randomUUID(),
+          productId: product.id,
+          name: product.name,
+          image: product.image,
+          basePrice: product.price,
+          ...custom,
+        },
+      ],
       subtotal,
       shipping,
       total: subtotal + shipping,
@@ -95,7 +123,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto p-0">
         <div className="grid md:grid-cols-2">
           {/* KOLOM KIRI: FORM DATA */}
-          <div className="space-y-5 p-6">
+          <div className="space-y-4 p-6">
             <DialogHeader>
               <DialogTitle className="font-serif text-3xl text-primary">{product.name}</DialogTitle>
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
@@ -110,6 +138,21 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 <Label htmlFor="gift-from">Dari (From)</Label>
                 <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
               </div>
+            </div>
+
+            {/* INPUT ALAMAT PENGIRIM */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <Label htmlFor="sender-address">Alamat Pengirim</Label>
+                <span className="text-[11px] text-muted-foreground">(Ditampilkan di kartu)</span>
+              </div>
+              <Input
+                id="sender-address"
+                value={senderAddress}
+                onChange={(e) => setSenderAddress(e.target.value)}
+                placeholder="Contoh: Jl. Kaliurang Km 5, Sleman, Yogyakarta"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -250,8 +293,15 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               </div>
             </div>
 
-            {/* PREVIEW KARTU UTAMA */}
-            <GreetingCard to={to} from={from} message={message} ribbon={ribbon} cardTemplate={cardTemplate} />
+            {/* PREVIEW KARTU UTAMA LENGKAP DENGAN PROPS ALAMAT */}
+            <GreetingCard
+              to={to}
+              from={from}
+              senderAddress={senderAddress}
+              message={message}
+              ribbon={ribbon}
+              cardTemplate={cardTemplate}
+            />
 
             {!isAdmin && (
               <div className="mt-auto space-y-3 rounded-xl bg-card p-4 shadow-soft">
