@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, MessageCircle, ShoppingBag, Check, MapPin } from "lucide-react";
+import { CalendarIcon, MessageCircle, ShoppingBag, Check, MapPin, Truck, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,6 @@ import { CARD_TEMPLATES, RIBBONS } from "@/data/floristData";
 
 const MAX = 200;
 
-// 4 Desain kartu unggulan siap pilih langsung di pratinjau
 const FEATURED_CARDS = [
   { id: "classic", label: "Classic", desc: "Floral Serif", border: "border-primary/40 bg-[#FDFBF7]" },
   { id: "gold", label: "Gold", desc: "Luxury Border", border: "border-[#D4AF37] bg-[#FFFDF9]" },
@@ -25,27 +24,39 @@ const FEATURED_CARDS = [
   { id: "romance", label: "Romance", desc: "Blush Rose", border: "border-[#B76E79]/50 bg-[#FFF9F9]" },
 ];
 
+const DELIVERY_SLOTS = [
+  "Pagi (08:00 – 11:00)",
+  "Siang (11:00 – 15:00)",
+  "Sore (15:00 – 19:00)",
+];
+
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
   const { addToCart, setCartOpen, city, settings, user, recordOrder } = useStore();
   const [to, setTo] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState("");
   const [from, setFrom] = useState("");
   const [senderAddress, setSenderAddress] = useState("");
   const [message, setMessage] = useState("");
   const [ribbon, setRibbon] = useState("emerald");
   const [cardTemplate, setCardTemplate] = useState("classic");
   const [date, setDate] = useState<Date | undefined>();
+  const [deliverySlot, setDeliverySlot] = useState(DELIVERY_SLOTS[0]);
   const [addons, setAddons] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
 
   useEffect(() => {
     if (product) {
       setTo("");
+      setRecipientPhone("");
+      setRecipientAddress("");
       setFrom(user?.name.split(" ")[0] ?? "");
       setSenderAddress(user?.address ?? "");
       setMessage("");
       setRibbon("emerald");
       setCardTemplate("classic");
       setDate(new Date(Date.now() + 864e5));
+      setDeliverySlot(DELIVERY_SLOTS[0]);
       setAddons([]);
       setQty(1);
     }
@@ -55,20 +66,33 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const total = (product.price + addonsTotal(addons)) * qty;
   const custom = {
     to,
+    recipientPhone,
+    recipientAddress,
     from,
     senderAddress,
     message,
     ribbon,
     cardTemplate,
     deliveryDate: date?.toISOString() ?? "",
+    deliverySlot,
     addons,
     qty,
   };
 
-  const add = () => {
+  const validateForm = () => {
     if (!to.trim() || !from.trim() || !date) {
-      return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
+      toast.error("Lengkapi nama penerima, nama pengirim, dan tanggal kirim");
+      return false;
     }
+    if (!recipientAddress.trim()) {
+      toast.error("Lengkapi alamat lengkap tujuan pengiriman (penerima)");
+      return false;
+    }
+    return true;
+  };
+
+  const add = () => {
+    if (!validateForm()) return;
     const error = addToCart({
       key: crypto.randomUUID(),
       productId: product.id,
@@ -84,18 +108,16 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   };
 
   const instantOrder = () => {
-    if (!to.trim() || !from.trim() || !date) {
-      return void toast.error("Lengkapi nama penerima, pengirim, dan tanggal kirim");
-    }
+    if (!validateForm()) return;
     const subtotal = total;
     const shipping = SHIPPING_FEE[city] ?? 30000;
     const order: Order = {
       id: "KLD-" + crypto.randomUUID(),
       customerName: user?.name ?? from ?? "Pelanggan",
       customerEmail: user?.email ?? "guest@kalandra.id",
-      phone: user?.phone ?? "-",
+      phone: recipientPhone.trim() || user?.phone || "-",
       city,
-      address: senderAddress.trim() || user?.address || "-",
+      address: recipientAddress.trim(),
       items: [
         {
           key: crypto.randomUUID(),
@@ -115,7 +137,23 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     };
     recordOrder(order);
     toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
-    window.open(waLink(settings.whatsappNumber, buildWaMessage(product, custom, city)), "_blank", "noreferrer");
+
+    // Menyusun detail lengkap (termasuk alamat tujuan, pengirim, sesi jam & template kartu) untuk WA
+    const baseWaText = buildWaMessage(product, custom, city);
+    const extraDetails = [
+      ``,
+      `*Detail Pengiriman & Kartu:*`,
+      `• Penerima: ${to.trim()}${recipientPhone.trim() ? ` (${recipientPhone.trim()})` : ""}`,
+      `• Alamat Tujuan: ${recipientAddress.trim()}`,
+      `• Sesi Waktu: ${deliverySlot}`,
+      `• Pengirim: ${from.trim()}`,
+      senderAddress.trim() ? `• Alamat Pengirim: ${senderAddress.trim()}` : null,
+      `• Desain Kartu: ${CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label ?? cardTemplate}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    window.open(waLink(settings.whatsappNumber, `${baseWaText}\n${extraDetails}`), "_blank", "noreferrer");
   };
 
   const activeRibbon = RIBBONS.find((r) => r.id === ribbon) ?? RIBBONS[0];
@@ -131,30 +169,57 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="gift-to">Untuk (To)</Label>
-                <Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" />
+            {/* DATA PENERIMA & ALAMAT TUJUAN */}
+            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                <Truck className="h-3.5 w-3.5" /> Tujuan Pengiriman (Penerima)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gift-to">Nama Penerima *</Label>
+                  <Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="recipient-phone">No. WA Penerima</Label>
+                  <Input
+                    id="recipient-phone"
+                    type="tel"
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(e.target.value)}
+                    placeholder="0812xxxxxxxx"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="gift-from">Dari (From)</Label>
-                <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
+                <Label htmlFor="recipient-address">Alamat Lengkap Penerima *</Label>
+                <Textarea
+                  id="recipient-address"
+                  rows={2}
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
+                  placeholder="Nama jalan, nomor rumah/gedung, patokan, kecamatan, kota..."
+                />
               </div>
             </div>
 
-            {/* INPUT ALAMAT PENGIRIM */}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-primary" />
-                <Label htmlFor="sender-address">Alamat Pengirim</Label>
-                <span className="text-[11px] text-muted-foreground">(Ditampilkan di kartu)</span>
+            {/* DATA PENGIRIM (DITAMPILKAN DI KARTU) */}
+            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3.5">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 text-primary" /> Identitas Pengirim (Di Kartu)
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="gift-from">Nama Pengirim *</Label>
+                <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
               </div>
-              <Input
-                id="sender-address"
-                value={senderAddress}
-                onChange={(e) => setSenderAddress(e.target.value)}
-                placeholder="Contoh: Jl. Sukun Raya No.98, Banguntapan, Bantul, DIY"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="sender-address">Alamat Pengirim</Label>
+                <Input
+                  id="sender-address"
+                  value={senderAddress}
+                  onChange={(e) => setSenderAddress(e.target.value)}
+                  placeholder="Contoh: Jl. Sukun Raya No.98, Banguntapan, Bantul, DIY"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -205,9 +270,10 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               </div>
             </div>
 
+            {/* TANGGAL, SESI JAM & JUMLAH */}
             <div className="grid grid-cols-[1fr_auto] gap-3">
               <div className="space-y-1.5">
-                <Label>Tanggal Pengiriman</Label>
+                <Label>Tanggal Pengiriman *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
@@ -236,6 +302,30 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                   value={qty}
                   onChange={(e) => setQty(Math.max(1, +e.target.value))}
                 />
+              </div>
+            </div>
+
+            {/* PILIHAN SESI JAM PENGIRIMAN */}
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-primary" /> Sesi Jam Pengiriman
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {DELIVERY_SLOTS.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setDeliverySlot(slot)}
+                    className={cn(
+                      "rounded-lg border px-2 py-2 text-[11px] font-medium transition-all",
+                      deliverySlot === slot
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "bg-card text-foreground hover:border-primary/50"
+                    )}
+                  >
+                    {slot}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -295,7 +385,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 </div>
               </div>
 
-              {/* PREVIEW KARTU DENGAN ALAMAT */}
+              {/* PREVIEW KARTU DENGAN ALAMAT PENGIRIM */}
               <GreetingCard
                 to={to}
                 from={from}
@@ -306,7 +396,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               />
             </div>
 
-            {/* CONTAINER TOMBOL: SELALU TAMPIL TANPA CEK ADMIN */}
+            {/* CONTAINER TOMBOL */}
             <div className="mt-4 space-y-3 rounded-xl border bg-card p-4 shadow-soft">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Total ({qty}x)</span>
@@ -323,6 +413,9 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               >
                 <MessageCircle className="mr-2 h-4 w-4" />Pesan via WhatsApp Langsung
               </Button>
+              <p className="text-center text-[11px] text-muted-foreground">
+                Foto hasil jadi rangkaian & kartu akan dikirim via WA sebelum kurir berangkat.
+              </p>
               {!settings.storeOpen && (
                 <p className="text-center text-xs text-destructive">PO sedang ditutup sementara.</p>
               )}
