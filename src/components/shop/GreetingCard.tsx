@@ -12,7 +12,7 @@ const readable = (hex: string) => {
 export function GreetingCard({
   to,
   recipientAddress,
-  senderAddress, // fallback jika masih dipanggil dari keranjang lama
+  senderAddress,
   from,
   message,
   ribbon,
@@ -31,7 +31,6 @@ export function GreetingCard({
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
 
-  // Prioritaskan alamat penerima
   const displayAddress = recipientAddress || senderAddress || "";
 
   const mapsUrl = displayAddress
@@ -149,32 +148,13 @@ export function GreetingCard({
             <Leaf className="h-4 w-4" />
           </div>
 
-          {/* Penerima & Alamat Tujuan Pengiriman */}
+          {/* Penerima (Bersih di Atas) */}
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground/80">
             Special Delivery For
           </p>
           <p className="mt-1 font-serif text-2xl font-bold tracking-wide text-primary drop-shadow-sm">
             {to || "Nama Penerima"}
           </p>
-
-          {/* Alamat Penerima (Tujuan Kirim) */}
-          {displayAddress && (
-            <div className="mx-auto mt-2.5 w-full max-w-sm px-2">
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Buka rute tujuan pengiriman di Google Maps"
-                className="group flex items-start justify-center gap-1.5 rounded-xl border border-primary/20 bg-white/90 p-2 text-left text-xs text-foreground/85 shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
-              >
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
-                <span className="flex-1 whitespace-normal break-words leading-snug">
-                  {displayAddress}
-                </span>
-                <ExternalLink className="no-print mt-0.5 h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
-              </a>
-            </div>
-          )}
 
           {/* Divider Hati Lembut */}
           <div className="mx-auto my-3 flex items-center justify-center gap-2 text-primary/30">
@@ -194,7 +174,7 @@ export function GreetingCard({
             </p>
           </div>
 
-          {/* Pengirim (Hanya Nama Pengirim) */}
+          {/* Pengirim */}
           <div className="mt-3 pt-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/75">
               Warmest Regards From
@@ -203,6 +183,25 @@ export function GreetingCard({
               {from || "Nama Pengirim"}
             </p>
           </div>
+
+          {/* Alamat Tujuan Pengiriman Dipindah ke Bawah */}
+          {displayAddress && (
+            <div className="mx-auto mt-4 w-full max-w-sm px-2">
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buka rute tujuan pengiriman di Google Maps"
+                className="group flex items-start justify-center gap-1.5 rounded-xl border border-primary/20 bg-white/90 p-2.5 text-left text-xs text-foreground/85 shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
+              >
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
+                <span className="flex-1 whitespace-normal break-words leading-snug">
+                  <strong className="font-semibold text-primary/90">Tujuan:</strong> {displayAddress}
+                </span>
+                <ExternalLink className="no-print mt-0.5 h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Footer Branding & Pita */}
