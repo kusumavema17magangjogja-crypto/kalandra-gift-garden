@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, MessageCircle, ShoppingBag, Check, MapPin, Truck, Clock } from "lucide-react";
+import { CalendarIcon, MessageCircle, ShoppingBag, Check, Truck, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const [recipientPhone, setRecipientPhone] = useState("");
   const [recipientAddress, setRecipientAddress] = useState("");
   const [from, setFrom] = useState("");
-  const [senderAddress, setSenderAddress] = useState("");
   const [message, setMessage] = useState("");
   const [ribbon, setRibbon] = useState("emerald");
   const [cardTemplate, setCardTemplate] = useState("classic");
@@ -51,7 +50,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       setRecipientPhone("");
       setRecipientAddress("");
       setFrom(user?.name.split(" ")[0] ?? "");
-      setSenderAddress(user?.address ?? "");
       setMessage("");
       setRibbon("emerald");
       setCardTemplate("classic");
@@ -69,7 +67,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     recipientPhone,
     recipientAddress,
     from,
-    senderAddress,
     message,
     ribbon,
     cardTemplate,
@@ -138,7 +135,6 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     recordOrder(order);
     toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
 
-    // Menyusun detail lengkap (termasuk alamat tujuan, pengirim, sesi jam & template kartu) untuk WA
     const baseWaText = buildWaMessage(product, custom, city);
     const extraDetails = [
       ``,
@@ -147,11 +143,8 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       `• Alamat Tujuan: ${recipientAddress.trim()}`,
       `• Sesi Waktu: ${deliverySlot}`,
       `• Pengirim: ${from.trim()}`,
-      senderAddress.trim() ? `• Alamat Pengirim: ${senderAddress.trim()}` : null,
       `• Desain Kartu: ${CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label ?? cardTemplate}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    ].join("\n");
 
     window.open(waLink(settings.whatsappNumber, `${baseWaText}\n${extraDetails}`), "_blank", "noreferrer");
   };
@@ -169,7 +162,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
             </DialogHeader>
 
-            {/* DATA PENERIMA & ALAMAT TUJUAN */}
+            {/* DATA PENERIMA & ALAMAT TUJUAN (TAMPIL DI KARTU) */}
             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 <Truck className="h-3.5 w-3.5" /> Tujuan Pengiriman (Penerima)
@@ -202,24 +195,10 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               </div>
             </div>
 
-            {/* DATA PENGIRIM (DITAMPILKAN DI KARTU) */}
-            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3.5">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 text-primary" /> Identitas Pengirim (Di Kartu)
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor="gift-from">Nama Pengirim *</Label>
-                <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="sender-address">Alamat Pengirim</Label>
-                <Input
-                  id="sender-address"
-                  value={senderAddress}
-                  onChange={(e) => setSenderAddress(e.target.value)}
-                  placeholder="Contoh: Jl. Sukun Raya No.98, Banguntapan, Bantul, DIY"
-                />
-              </div>
+            {/* DATA PENGIRIM */}
+            <div className="space-y-1.5">
+              <Label htmlFor="gift-from">Nama Pengirim (From) *</Label>
+              <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
             </div>
 
             <div className="space-y-1.5">
@@ -385,11 +364,11 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 </div>
               </div>
 
-              {/* PREVIEW KARTU DENGAN ALAMAT PENGIRIM */}
+              {/* PREVIEW KARTU DENGAN ALAMAT PENERIMA */}
               <GreetingCard
                 to={to}
+                recipientAddress={recipientAddress}
                 from={from}
-                senderAddress={senderAddress}
                 message={message}
                 ribbon={ribbon}
                 cardTemplate={cardTemplate}
