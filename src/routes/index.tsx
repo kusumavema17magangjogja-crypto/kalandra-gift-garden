@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Star, Check, MessageCircle, Camera, Package, Palette, Hammer, HandHeart } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SiteHeader, SiteFooter } from "@/components/shop/SiteHeader";
 import { CustomizeDialog } from "@/components/shop/CustomizeDialog";
 import { useStore } from "@/lib/store";
-import { CATEGORY_EMOJI, IMAGES, isHalalProduct, SHIPPING_FEE, formatIDR, waLink, type Category, type Order, type Product, type ProductTag } from "@/lib/data";
+import { CATEGORY_EMOJI, IMAGES, isHalalProduct, formatIDR, waLink, type Category, type Product, type ProductTag } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { FlashSale, ShoppingSelectors, InspirationAndHelp } from "@/components/shop/CommercialSections";
 import { BUDGETS, OCCASIONS, matchesOccasion } from "@/data/floristData";
@@ -50,45 +49,7 @@ const REVIEWS = [
 ];
 
 function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
-  const { settings, recordOrder, user, city } = useStore();
   const limited = p.stock <= 5;
-
-  const quickOrder = () => {
-    const shipping = SHIPPING_FEE[city] ?? 30000;
-    const item = {
-      key: crypto.randomUUID(),
-      productId: p.id,
-      name: p.name,
-      image: p.image,
-      basePrice: p.price,
-      qty: 1,
-      to: "",
-      from: user?.name.split(" ")[0] ?? "",
-      message: "",
-      ribbon: "emerald",
-      deliveryDate: new Date(Date.now() + 864e5).toISOString(),
-      addons: [],
-    };
-    const order: Order = {
-      id: "KLD-" + crypto.randomUUID(),
-      customerName: user?.name ?? "Pelanggan",
-      customerEmail: user?.email ?? "guest@kalandra.id",
-      phone: user?.phone ?? "-",
-      city,
-      address: user?.address || "-",
-      items: [item],
-      subtotal: p.price,
-      shipping,
-      total: p.price + shipping,
-      status: "Menunggu Pembayaran",
-      createdAt: new Date().toISOString(),
-      deliveryDate: item.deliveryDate,
-    };
-    recordOrder(order);
-    toast.success(`Pesanan ${order.id} tercatat — lanjutkan konfirmasi via WhatsApp`);
-    window.open(waLink(settings.whatsappNumber, `Halo ${settings.storeName}, saya ingin memesan ${p.name} (${formatIDR(p.price)}).`), "_blank", "noreferrer");
-  };
-
   const badge = p.badge ?? (p.tags.includes("express") ? "Same-Day" : limited ? "Slot Terbatas" : "Ready Stock");
 
   return (
@@ -150,7 +111,7 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
           </p>
         </div>
 
-        {/* TOMBOL SELALU MUNCUL SECARA PERMANEN */}
+        {/* KEDUA TOMBOL MENGARAH KE FORM KUSTOMISASI & ALAMAT AGAR DATA PENGIRIMAN LENGKAP */}
         <div className="mt-4 flex w-full flex-col gap-2 pt-2">
           <Button
             className="h-10 w-full rounded-xl text-xs font-semibold shadow-xs"
@@ -163,7 +124,7 @@ function ProductCard({ p, onPick }: { p: Product; onPick: () => void }) {
             variant="outline"
             className="h-9 w-full gap-1.5 rounded-xl border-primary/30 text-xs font-semibold text-primary hover:border-primary hover:bg-primary/5"
             disabled={p.stock === 0}
-            onClick={quickOrder}
+            onClick={onPick}
           >
             <MessageCircle className="h-4 w-4" />
             Order WA
