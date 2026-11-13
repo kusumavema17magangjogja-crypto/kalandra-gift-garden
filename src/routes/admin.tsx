@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3, Package, Tag, Users, Settings, Bell, Store, ChevronLeft, Menu, TrendingUp, TrendingDown,
-  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift,
+  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift, Receipt, Printer, MapPin, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/shop/StatusBadge";
 import { GreetingCard } from "@/components/shop/GreetingCard";
 import { useStore } from "@/lib/store";
-import { CATEGORIES, CITIES, IMAGES, ORDER_STATUSES, formatDate, formatIDR, ribbonLabel, waLink, type Order, type OrderStatus, type Product } from "@/lib/data";
+import { ADDONS, CATEGORIES, CITIES, IMAGES, ORDER_STATUSES, addonsTotal, formatDate, formatIDR, ribbonLabel, waLink, type Order, type OrderStatus, type Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
@@ -44,6 +44,46 @@ const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "customers", label: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
+
+// Helper menyusun teks Invoice WA siap kirim
+function buildInvoiceWaText(o: Order, storeName: string) {
+  const itemLines = o.items
+    .map((item, idx) => {
+      const addonNames = item.addons
+        .map((id) => ADDONS.find((a) => a.id === id)?.label)
+        .filter(Boolean);
+      const itemTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+      return `${idx + 1}. ${item.name} (${item.qty}x) — ${formatIDR(itemTotal)}${
+        addonNames.length ? `\n   + Add-ons: ${addonNames.join(", ")}` : ""
+      }${item.to ? `\n   + Untuk: ${item.to} (Dari: ${item.from || "-"})` : ""}`;
+    })
+    .join("\n");
+
+  const recipientName = o.items[0]?.to || o.customerName;
+
+  return [
+    `*INVOICE PESANAN — ${storeName.toUpperCase()}*`,
+    `No. Invoice: *${o.id}*`,
+    `Tanggal Order: ${formatDate(o.createdAt)}`,
+    `Status: *${o.status}*`,
+    ``,
+    `*Data Pengiriman:*`,
+    `• Pemesan: ${o.customerName}`,
+    `• Penerima: ${recipientName}`,
+    `• Kota: ${o.city}`,
+    `• Alamat Tujuan: ${o.address || "-"}`,
+    `• Jadwal Kirim: ${formatDate(o.deliveryDate)}`,
+    ``,
+    `*Rincian Pesanan:*`,
+    itemLines,
+    ``,
+    `Subtotal: ${formatIDR(o.subtotal)}`,
+    `Ongkos Kirim (${o.city}): ${formatIDR(o.shipping)}`,
+    `*TOTAL TAGIHAN: ${formatIDR(o.total)}*`,
+    ``,
+    `Terima kasih telah mempercayakan momen spesial Anda bersama ${storeName}!`,
+  ].join("\n");
+}
 
 function Admin() {
   const [view, setView] = useState<View>("overview");
@@ -120,7 +160,20 @@ function Panel({ children, className }: { children: React.ReactNode; className?:
 }
 
 function downloadCSV(orders: Order[]) {
-  const rows = [["Order ID", "Pelanggan", "Produk", "Kota", "Tanggal Kirim", "Total", "Status"], ...orders.map((o) => [o.id, o.customerName, o.items.map((i) => i.name).join(" / "), o.city, formatDate(o.deliveryDate), o.total, o.status])];
+  const rows = [
+    ["Order ID", "Pelanggan", "No. HP", "Produk", "Kota", "Alamat Tujuan", "Tanggal Kirim", "Total", "Status"],
+    ...orders.map((o) => [
+      o.id,
+      o.customerName,
+      o.phone,
+      o.items.map((i) => i.name).join(" / "),
+      o.city,
+      o.address || "-",
+      formatDate(o.deliveryDate),
+      o.total,
+      o.status,
+    ]),
+  ];
   const blob = new Blob([rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "laporan-kalandra.csv"; a.click();
 }
@@ -156,7 +209,10 @@ function Overview({ go }: { go: (v: View) => void }) {
             {orders.slice(0, 5).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <img src={o.items[0]?.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1"><p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p><p className="truncate text-xs text-muted-foreground">{o.items[0]?.name} · {o.city}</p></div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p>
+                  <p className="truncate text-xs text-muted-foreground">{o.items[0]?.name} · {o.city}{o.address && o.address !== "-" ? ` (${o.address})` : ""}</p>
+                </div>
                 <span className="font-semibold">{formatIDR(o.total)}</span><StatusBadge status={o.status} />
               </li>
             ))}
@@ -174,62 +230,276 @@ function Overview({ go }: { go: (v: View) => void }) {
 }
 
 function Orders() {
-  const { orders, setOrderStatus } = useStore();
+  const { orders, setOrderStatus, settings } = useStore();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [city, setCity] = useState<string>("all");
   const [card, setCard] = useState<Order | null>(null);
+  const [invoice, setInvoice] = useState<Order | null>(null);
+
   const list = orders.filter((o) =>
     (status === "all" || o.status === status) && (city === "all" || o.city === city) &&
-    (o.customerName + o.id).toLowerCase().includes(q.toLowerCase()));
+    (o.customerName + o.id + (o.address || "")).toLowerCase().includes(q.toLowerCase()));
+
+  const handlePrintInvoice = () => {
+    const el = document.getElementById("printable-invoice");
+    if (!el) return void window.print();
+    const win = window.open("", "_blank", "width=480,height=760");
+    if (!win) return void window.print();
+
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((s) => s.outerHTML)
+      .join("\n");
+
+    win.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Struk Invoice - ${invoice?.id}</title>
+          ${styles}
+          <style>
+            @page { margin: 10mm; }
+            body {
+              display: flex;
+              justify-content: center;
+              background: #fff !important;
+              padding: 16px;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            #printable-invoice {
+              width: 100%;
+              max-width: 400px;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 20px;
+            }
+            .no-print { display: none !important; }
+          </style>
+        </head>
+        <body>
+          ${el.outerHTML}
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
   return (
     <Panel>
       <div className="flex flex-col gap-3 md:flex-row">
-        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari nama pelanggan / Order ID" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari nama pelanggan, Order ID, atau alamat tujuan" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={status} onValueChange={setStatus}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
         <Select value={city} onValueChange={setCity}><SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead><tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">{["Order ID", "Pelanggan", "Produk", "Tgl Kirim", "Kota", "Total", "Status", "Aksi"].map((h) => <th key={h} className="px-2 py-3 font-semibold">{h}</th>)}</tr></thead>
+        <table className="w-full min-w-[1120px] text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+              {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
+                <th key={h} className="px-2 py-3 font-semibold">{h}</th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
-            {list.map((o) => (
-              <tr key={o.id} className="border-b last:border-0 hover:bg-secondary/50">
-                <td className="px-2 py-3 font-semibold">{o.id}</td>
-                <td className="px-2 py-3">{o.customerName}</td>
-                <td className="max-w-48 truncate px-2 py-3">{o.items.map((i) => i.name).join(", ")}</td>
-                <td className="px-2 py-3">{formatDate(o.deliveryDate)}</td>
-                <td className="px-2 py-3">{o.city}</td>
-                <td className="px-2 py-3 font-medium">{formatIDR(o.total)}</td>
-                <td className="px-2 py-3">
-                  <Select value={o.status} onValueChange={(v) => { setOrderStatus(o.id, v as OrderStatus); toast.success(`${o.id} → ${v}`); }}>
-                    <SelectTrigger className="h-8 w-48 border-0 bg-transparent p-0 shadow-none"><StatusBadge status={o.status} /></SelectTrigger>
-                    <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </td>
-                <td className="px-2 py-3">
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => setCard(o)}><Eye className="mr-1 h-3.5 w-3.5" />Kartu</Button>
-                    <Button asChild size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success"><a href={waLink(o.phone, `Halo ${o.customerName}, update pesanan ${o.id}: ${o.status}.`)} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle className="h-4 w-4" /></a></Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {list.map((o) => {
+              const waInvoiceHref = waLink(o.phone, buildInvoiceWaText(o, settings.storeName));
+              return (
+                <tr key={o.id} className="border-b align-top last:border-0 hover:bg-secondary/50">
+                  <td className="px-2 py-3 font-semibold whitespace-nowrap">{o.id}</td>
+                  <td className="px-2 py-3">
+                    <p className="font-medium">{o.customerName}</p>
+                    {o.phone && o.phone !== "-" && (
+                      <p className="text-xs text-muted-foreground">{o.phone}</p>
+                    )}
+                  </td>
+                  <td className="max-w-44 px-2 py-3">
+                    <p className="line-clamp-2">{o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
+                  </td>
+                  <td className="max-w-60 px-2 py-3">
+                    <div className="flex items-start gap-1 text-xs">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      <div>
+                        <span className="font-semibold text-primary">{o.city}</span>
+                        <p className="whitespace-normal break-words leading-snug text-muted-foreground">
+                          {o.address && o.address !== "-" ? o.address : "Belum diisi"}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
+                  <td className="px-2 py-3 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
+                  <td className="px-2 py-3">
+                    <Select value={o.status} onValueChange={(v) => { setOrderStatus(o.id, v as OrderStatus); toast.success(`${o.id} → ${v}`); }}>
+                      <SelectTrigger className="h-8 w-44 border-0 bg-transparent p-0 shadow-none"><StatusBadge status={o.status} /></SelectTrigger>
+                      <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setCard(o)}>
+                        <Eye className="mr-1 h-3.5 w-3.5" />Kartu
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setInvoice(o)}>
+                        <Receipt className="mr-1 h-3.5 w-3.5" />Struk
+                      </Button>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="h-8 bg-success px-2.5 text-xs text-success-foreground hover:bg-success/90"
+                        title="Kirim Struk / Invoice langsung ke WhatsApp"
+                      >
+                        <a href={waInvoiceHref} target="_blank" rel="noreferrer">
+                          <MessageCircle className="mr-1 h-3.5 w-3.5" />Kirim WA
+                        </a>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {list.length === 0 && <tr><td colSpan={8} className="py-10 text-center text-muted-foreground">Tidak ada pesanan.</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {/* MODAL PRATINJAU KARTU UCAPAN */}
       <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
         <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">Kartu Ucapan · {card?.id}</DialogTitle></DialogHeader>
           {card?.items.map((i) => (
             <div key={i.key} className="space-y-2">
               <p className="text-sm text-muted-foreground">{i.name} · Pita <b>{ribbonLabel(i.ribbon)}</b></p>
-              <GreetingCard to={i.to} from={i.from} message={i.message} ribbon={i.ribbon} cardTemplate={i.cardTemplate} />
+              <GreetingCard
+                to={i.to}
+                recipientAddress={card.address && card.address !== "-" ? card.address : undefined}
+                from={i.from}
+                message={i.message}
+                ribbon={i.ribbon}
+                cardTemplate={i.cardTemplate}
+              />
             </div>
           ))}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL STRUK / INVOICE & KIRIM KE WA */}
+      <Dialog open={!!invoice} onOpenChange={(o) => !o && setInvoice(null)}>
+        <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">Struk Invoice</DialogTitle>
+          </DialogHeader>
+
+          {invoice && (
+            <div className="space-y-4">
+              {/* AREA STRUK SIAP CETAK */}
+              <div id="printable-invoice" className="space-y-4 rounded-xl border bg-background p-5 text-sm shadow-xs">
+                <div className="border-b border-dashed pb-3 text-center">
+                  <p className="font-serif text-xl font-bold text-primary">{settings.storeName}</p>
+                  <p className="text-xs text-muted-foreground">{settings.storeTagline}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">WA: +{settings.whatsappNumber}</p>
+                </div>
+
+                <div className="space-y-1 border-b border-dashed pb-3 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">No. Invoice</span>
+                    <span className="font-semibold">{invoice.id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tanggal Order</span>
+                    <span>{formatDate(invoice.createdAt)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Jadwal Kirim</span>
+                    <span className="font-medium">{formatDate(invoice.deliveryDate)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className="font-semibold text-primary">{invoice.status}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1 border-b border-dashed pb-3 text-xs">
+                  <p className="font-semibold uppercase tracking-wider text-muted-foreground">Tujuan Pengiriman</p>
+                  <p className="font-medium text-foreground">
+                    {invoice.items[0]?.to || invoice.customerName}{" "}
+                    {invoice.phone && invoice.phone !== "-" ? `(${invoice.phone})` : ""}
+                  </p>
+                  <p className="leading-relaxed text-muted-foreground">
+                    {invoice.address && invoice.address !== "-" ? `${invoice.address} — ${invoice.city}` : invoice.city}
+                  </p>
+                </div>
+
+                <div className="space-y-2 border-b border-dashed pb-3 text-xs">
+                  <p className="font-semibold uppercase tracking-wider text-muted-foreground">Rincian Item</p>
+                  {invoice.items.map((item) => {
+                    const addonLabels = item.addons
+                      .map((id) => ADDONS.find((a) => a.id === id)?.label)
+                      .filter(Boolean);
+                    const rowTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+                    return (
+                      <div key={item.key} className="space-y-0.5">
+                        <div className="flex justify-between font-medium">
+                          <span>{item.name} ({item.qty}x)</span>
+                          <span>{formatIDR(rowTotal)}</span>
+                        </div>
+                        {addonLabels.length > 0 && (
+                          <p className="text-[11px] text-muted-foreground">+ {addonLabels.join(", ")}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>{formatIDR(invoice.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Ongkos Kirim ({invoice.city})</span>
+                    <span>{formatIDR(invoice.shipping)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 text-base font-bold text-primary">
+                    <span>TOTAL</span>
+                    <span>{formatIDR(invoice.total)}</span>
+                  </div>
+                </div>
+
+                <p className="pt-2 text-center text-[11px] italic text-muted-foreground">
+                  Terima kasih telah berbelanja di {settings.storeName}.
+                </p>
+              </div>
+
+              {/* TOMBOL AKSI: CETAK PDF & KIRIM INVOICE KE WA */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button variant="outline" className="w-full" onClick={handlePrintInvoice}>
+                  <Printer className="mr-1.5 h-4 w-4" />
+                  Cetak Struk / PDF
+                </Button>
+                <Button asChild className="w-full bg-success text-success-foreground hover:bg-success/90">
+                  <a
+                    href={waLink(invoice.phone, buildInvoiceWaText(invoice, settings.storeName))}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Send className="mr-1.5 h-4 w-4" />
+                    Kirim ke WA
+                  </a>
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Panel>
