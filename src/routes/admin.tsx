@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3, Package, Tag, Users, Settings, Bell, Store, ChevronLeft, Menu, TrendingUp, TrendingDown,
-  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift, Receipt, Printer, MapPin, Send,
+  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift, Receipt, Printer, MapPin, Send, Clock, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/shop/StatusBadge";
@@ -89,6 +90,7 @@ function Admin() {
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const { orders, settings, isAdmin, loaded } = useStore();
   const [denied, setDenied] = useState(false);
 
@@ -101,7 +103,9 @@ function Admin() {
 
   if (!loaded) return null;
   if (!isAdmin) return <Navigate to="/" />;
-  const unread = orders.filter((o) => o.status === "Menunggu Pembayaran").length;
+
+  const pendingOrders = orders.filter((o) => o.status === "Menunggu Pembayaran");
+  const unread = pendingOrders.length;
 
   const Nav = ({ compact }: { compact?: boolean }) => (
     <nav className="flex flex-col gap-1 p-3">
@@ -136,9 +140,110 @@ function Admin() {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobile(true)} aria-label="Menu"><Menu /></Button>
           <h1 className="font-serif text-2xl text-primary">{MENU.find((m) => m.id === view)?.label}</h1>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi" onClick={() => setView("orders")}>
-              <Bell />{unread > 0 && <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">{unread}</span>}
-            </Button>
+            {/* POPOVER NOTIFIKASI PESANAN BARU */}
+            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi Pesanan Baru">
+                  <Bell className="h-5 w-5" />
+                  {unread > 0 && (
+                    <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                      {unread}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0 sm:w-96">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <div>
+                    <p className="font-serif text-base font-semibold text-primary">Notifikasi Pesanan</p>
+                    <p className="text-xs text-muted-foreground">
+                      {unread > 0 ? `${unread} pesanan menunggu konfirmasi bayar` : "Semua pesanan sudah diproses"}
+                    </p>
+                  </div>
+                  {unread > 0 && (
+                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent">
+                      {unread} Baru
+                    </span>
+                  )}
+                </div>
+
+                <div className="max-h-80 divide-y overflow-y-auto">
+                  {pendingOrders.length > 0 ? (
+                    pendingOrders.map((o) => (
+                      <div key={o.id} className="space-y-2 p-3.5 transition hover:bg-secondary/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {o.customerName} <span className="font-normal text-muted-foreground">· {o.id}</span>
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-xs font-bold text-primary">{formatIDR(o.total)}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Clock className="h-3 w-3 text-accent" /> Kirim {formatDate(o.deliveryDate)} · {o.city}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => {
+                                setView("orders");
+                                setNotifOpen(false);
+                              }}
+                            >
+                              Kelola
+                            </Button>
+                            <Button
+                              asChild
+                              size="sm"
+                              className="h-7 bg-success px-2 text-[11px] text-success-foreground hover:bg-success/90"
+                            >
+                              <a
+                                href={waLink(
+                                  o.phone,
+                                  `Halo ${o.customerName}, pesanan ${o.id} sebesar ${formatIDR(o.total)} sudah kami terima dan sedang menunggu konfirmasi pembayaran.`
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <MessageCircle className="mr-1 h-3 w-3" />WA
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-center">
+                      <CheckCircle2 className="h-7 w-7 text-success/70" />
+                      <p className="text-sm font-medium text-foreground">Tidak ada tagihan tertunda</p>
+                      <p className="text-xs text-muted-foreground">Semua pesanan masuk sudah terverifikasi.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t bg-muted/30 p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs text-primary"
+                    onClick={() => {
+                      setView("orders");
+                      setNotifOpen(false);
+                    }}
+                  >
+                    Lihat Semua Daftar Pesanan →
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="hidden items-center gap-2 sm:flex"><span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm text-primary-foreground">AK</span><span className="text-sm font-medium">Admin {settings.storeName}</span></div>
             <Button asChild variant="outline" size="sm"><Link to="/"><Store className="mr-1 h-4 w-4" />Kembali ke Toko</Link></Button>
           </div>
