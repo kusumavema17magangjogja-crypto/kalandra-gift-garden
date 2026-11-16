@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, MessageCircle, ShoppingBag, Check, Truck, Clock } from "lucide-react";
+import { CalendarIcon, MessageCircle, ShoppingBag, Check, Truck, Clock, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const [recipientPhone, setRecipientPhone] = useState("");
   const [recipientAddress, setRecipientAddress] = useState("");
   const [from, setFrom] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
   const [message, setMessage] = useState("");
   const [ribbon, setRibbon] = useState("emerald");
   const [cardTemplate, setCardTemplate] = useState("classic");
@@ -51,6 +52,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       setRecipientPhone("");
       setRecipientAddress("");
       setFrom(user?.name.split(" ")[0] ?? "");
+      setSenderPhone(user?.phone ?? "");
       setMessage("");
       setRibbon("emerald");
       setCardTemplate("classic");
@@ -71,6 +73,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     recipientAddress,
     recipientCity: city,
     from,
+    senderPhone,
     message,
     ribbon,
     cardTemplate,
@@ -87,6 +90,10 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     }
     if (!recipientAddress.trim()) {
       toast.error("Lengkapi alamat lengkap tujuan pengiriman (penerima)");
+      return false;
+    }
+    if (!senderPhone.trim()) {
+      toast.error("Isi No. WA Pemesan untuk pengiriman invoice & konfirmasi pembayaran");
       return false;
     }
     return true;
@@ -112,13 +119,15 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     if (!validateForm()) return;
     const subtotal = total;
     const shipping = currentShipping;
-    const fullAddressWithCity = `${recipientAddress.trim()} (${city})`;
+    const fullAddressWithCity = `${recipientAddress.trim()} (${city})${
+      recipientPhone.trim() ? ` · WA Penerima: ${recipientPhone.trim()}` : ""
+    }`;
 
     const order: Order = {
       id: "KLD-" + crypto.randomUUID(),
-      customerName: user?.name ?? from ?? "Pelanggan",
+      customerName: user?.name ?? from.trim() ?? "Pelanggan",
       customerEmail: user?.email ?? "guest@kalandra.id",
-      phone: recipientPhone.trim() || user?.phone || "-",
+      phone: senderPhone.trim(),
       city,
       address: fullAddressWithCity,
       items: [
@@ -144,12 +153,14 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
     const baseWaText = buildWaMessage(product, custom, city);
     const extraDetails = [
       ``,
+      `*Data Pemesan (Invoice):*`,
+      `• Pemesan: ${from.trim()} (${senderPhone.trim()})`,
+      ``,
       `*Detail Pengiriman & Kartu:*`,
-      `• Penerima: ${to.trim()}${recipientPhone.trim() ? ` (${recipientPhone.trim()})` : ""}`,
+      `• Penerima: ${to.trim()}${recipientPhone.trim() ? ` (WA Penerima: ${recipientPhone.trim()})` : ""}`,
       `• Kota Tujuan: ${city} (Ongkir: ${formatIDR(shipping)})`,
       `• Alamat Tujuan: ${recipientAddress.trim()}`,
       `• Sesi Waktu: ${deliverySlot}`,
-      `• Pengirim: ${from.trim()}`,
       `• Desain Kartu: ${CARD_TEMPLATES.find((t) => t.id === cardTemplate)?.label ?? cardTemplate}`,
     ].join("\n");
 
@@ -180,7 +191,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                   <Input id="gift-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Ibu Ratna" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="recipient-phone">No. WA Penerima</Label>
+                  <Label htmlFor="recipient-phone">No. WA Penerima (Kurir)</Label>
                   <Input
                     id="recipient-phone"
                     type="tel"
@@ -225,10 +236,30 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               </div>
             </div>
 
-            {/* DATA PENGIRIM (HANYA NAMA) */}
-            <div className="space-y-1.5">
-              <Label htmlFor="gift-from">Nama Pengirim (From) *</Label>
-              <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
+            {/* DATA PEMESAN / PENGIRIM (UNTUK INVOICE & TAGIHAN) */}
+            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3.5">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/80">
+                <UserCheck className="h-3.5 w-3.5 text-primary" /> Data Pemesan & Pengirim
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gift-from">Nama Pengirim (Di Kartu) *</Label>
+                  <Input id="gift-from" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Sari" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sender-phone">No. WA Pemesan (Invoice) *</Label>
+                  <Input
+                    id="sender-phone"
+                    type="tel"
+                    value={senderPhone}
+                    onChange={(e) => setSenderPhone(e.target.value)}
+                    placeholder="0813xxxxxxxx"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Struk & konfirmasi pembayaran dikirim ke No. WA Pemesan agar kejutan penerima tetap terjaga.
+              </p>
             </div>
 
             <div className="space-y-1.5">
