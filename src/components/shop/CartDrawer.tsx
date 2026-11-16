@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Minus, Plus, Trash2, ShoppingBag, MessageCircle, CheckCircle2, CreditCard, MapPin, Copy, Check, Info } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, MessageCircle, CheckCircle2, CreditCard, MapPin, Copy, Check, Info, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,19 +12,24 @@ type ExtendedCartItem = ReturnType<typeof useStore>["cart"][number] & {
   recipientAddress?: string;
   recipientPhone?: string;
   recipientCity?: string;
+  senderPhone?: string;
   deliverySlot?: string;
 };
+
+const BANK_ACCOUNTS = [
+  { bank: "BCA", number: "8465192044", holder: "CV Kalandra Florist Indonesia" },
+  { bank: "Mandiri", number: "1370019284752", holder: "CV Kalandra Florist Indonesia" },
+];
 
 export function CartDrawer() {
   const s = useStore();
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (s.isAdmin) return null;
 
   const cartItems = s.cart as ExtendedCartItem[];
 
-  // Hitung ongkir: jika tiap item punya kota tujuan unik, jumlahkan ongkir per tujuan unik; jika sama, pakai ongkir kota aktif
   const uniqueDestinations = Array.from(
     new Set(
       cartItems
@@ -51,31 +56,60 @@ export function CartDrawer() {
     s.setCartOpen(open);
   };
 
+  const handleCopyText = (key: string, text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success(`${label} disalin`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
   const handleDirectCheckout = () => {
     const primaryItem = cartItems[0];
 
-    // Gabungkan seluruh alamat tujuan jika multi-alamat, atau 1 alamat jika tujuan tunggal
     const combinedAddress = isMultiDestination
       ? cartItems
           .map((item, idx) => {
             const c = item.recipientCity || s.city;
             const a = item.recipientAddress?.trim() || "-";
-            return `${idx + 1}. [${item.name} -> ${item.to}] (${c}) ${a}`;
+            const rPhone = item.recipientPhone?.trim() ? ` · WA Penerima: ${item.recipientPhone.trim()}` : "";
+            return `${idx + 1}. [${item.name} -> ${item.to}] (${c}) ${a}${rPhone}`;
           })
           .join(" | ")
       : primaryItem?.recipientAddress?.trim()
-      ? `${primaryItem.recipientAddress.trim()} (${primaryItem.recipientCity || s.city})`
+      ? `${primaryItem.recipientAddress.trim()} (${primaryItem.recipientCity || s.city})${
+          primaryItem.recipientPhone?.trim() ? ` · WA Penerima: ${primaryItem.recipientPhone.trim()}` : ""
+        }`
       : s.user?.address || "-";
 
-    const resolvedPhone = primaryItem?.recipientPhone?.trim() || s.user?.phone || "-";
+    const resolvedBuyerPhone = primaryItem?.senderPhone?.trim() || s.user?.phone || "-";
+
+    // Snapshot item & qty sebelum keranjang dikosongkan oleh s.checkout()
+    const purchasedSnapshot = cartItems.map((item) => ({
+      productId: item.productId,
+      qty: item.qty,
+    }));
 
     const baseMessage = buildCartWaMessage(s.cart, s.city, calculatedShipping);
     const order = s.checkout();
     if (!order) return;
 
-    // Sinkronkan alamat gabungan, total ongkir multi-tujuan, dan nomor kontak
+    // Step 4: Kurangi stok masing-masing produk secara otomatis sesuai jumlah pembelian
+    const qtyByProduct = new Map<string, number>();
+    for (const item of purchasedSnapshot) {
+      qtyByProduct.set(item.productId, (qtyByProduct.get(item.productId) ?? 0) + item.qty);
+    }
+    qtyByProduct.forEach((boughtQty, productId) => {
+      const targetProduct = s.products.find((p) => p.id === productId);
+      if (targetProduct) {
+        s.saveProduct({
+          ...targetProduct,
+          stock: Math.max(0, targetProduct.stock - boughtQty),
+        });
+      }
+    });
+
     order.address = combinedAddress;
-    order.phone = resolvedPhone;
+    order.phone = resolvedBuyerPhone;
     order.shipping = calculatedShipping;
     order.total = order.subtotal + calculatedShipping;
 
@@ -83,14 +117,16 @@ export function CartDrawer() {
       .map((item, idx) => {
         const c = item.recipientCity || s.city;
         const a = item.recipientAddress?.trim() || "-";
+        const rPhone = item.recipientPhone?.trim() ? ` | WA Penerima: ${item.recipientPhone.trim()}` : "";
         const slot = item.deliverySlot ? ` | Sesi: ${item.deliverySlot}` : "";
-        return `${idx + 1}. ${item.name} -> *${item.to}* (${c})\n   Alamat: ${a}${slot}`;
+        return `${idx + 1}. ${item.name} -> *${item.to}* (${c})\n   Alamat: ${a}${rPhone}${slot}`;
       })
       .join("\n");
 
     const fullWaMessage = [
       `*KONFIRMASI CHECKOUT — ${s.settings.storeName.toUpperCase()}*`,
       `No. Pesanan: *${order.id}*`,
+      `Pemesan: ${order.customerName} (${resolvedBuyerPhone})`,
       `Status: *Menunggu Pembayaran*`,
       ``,
       baseMessage,
@@ -98,19 +134,12 @@ export function CartDrawer() {
       `*Rincian Tujuan Pengiriman (${uniqueDestinations.length || 1} Lokasi):*`,
       destinationLines,
       ``,
-      `Mohon info nomor rekening/QRIS untuk penyelesaian pembayaran. Terima kasih!`,
+      `Saya akan segera melampirkan bukti transfer pembayaran. Terima kasih!`,
     ].join("\n");
 
     setCompletedOrder(order);
-    toast.success(`Pesanan ${order.id} berhasil dibuat!`);
+    toast.success(`Pesanan ${order.id} berhasil dibuat & stok diperbarui!`);
     sessionStorage.setItem(`wa_msg_${order.id}`, fullWaMessage);
-  };
-
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    toast.success("Nomor pesanan disalin");
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -118,73 +147,109 @@ export function CartDrawer() {
       <SheetContent className="flex w-full flex-col sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl text-primary">
-            {completedOrder ? "Checkout Berhasil" : "Keranjang Anda"}
+            {completedOrder ? "Checkout & Pembayaran" : "Keranjang Anda"}
           </SheetTitle>
         </SheetHeader>
 
-        {/* TAMPILAN KONFIRMASI SETELAH CHECKOUT */}
         {completedOrder ? (
-          <div className="flex flex-1 flex-col justify-between space-y-5 overflow-y-auto pt-4">
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-success/30 bg-success/5 p-4 text-center">
-                <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-                <p className="mt-2 font-serif text-xl font-semibold text-foreground">
-                  Pesanan Tercatat!
+          <div className="flex flex-1 flex-col justify-between space-y-4 overflow-y-auto pt-3">
+            <div className="space-y-3.5">
+              {/* STATUS PESANAN */}
+              <div className="rounded-2xl border border-success/30 bg-success/5 p-3.5 text-center">
+                <CheckCircle2 className="mx-auto h-9 w-9 text-success" />
+                <p className="mt-1.5 font-serif text-lg font-semibold text-foreground">
+                  Pesanan Berhasil Dicatat!
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Status saat ini: <span className="font-semibold text-accent">Menunggu Pembayaran</span>
+                <p className="text-xs text-muted-foreground">
+                  Status: <span className="font-semibold text-accent">Menunggu Pembayaran</span>
                 </p>
-                <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold">
+                <div className="mt-2.5 flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold">
                   <span>{completedOrder.id}</span>
                   <button
                     type="button"
-                    onClick={() => handleCopyId(completedOrder.id)}
+                    onClick={() => handleCopyText("orderId", completedOrder.id, "Nomor pesanan")}
                     className="text-muted-foreground hover:text-primary"
                     title="Salin Nomor Pesanan"
                   >
-                    {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedKey === "orderId" ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-xl border bg-card p-4 text-xs">
-                <p className="font-semibold uppercase tracking-wider text-muted-foreground">Ringkasan Tagihan</p>
+              {/* STEP 5: INFORMASI REKENING PEMBAYARAN */}
+              <div className="space-y-2.5 rounded-xl border border-primary/25 bg-primary/[0.03] p-3.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 font-semibold uppercase tracking-wider text-primary">
+                    <Landmark className="h-3.5 w-3.5" /> Rekening Transfer Resmi
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText("total", String(completedOrder.total), "Nominal tagihan")}
+                    className="flex items-center gap-1 font-bold text-primary hover:underline"
+                    title="Salin nominal transfer"
+                  >
+                    {formatIDR(completedOrder.total)}
+                    {copiedKey === "total" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {BANK_ACCOUNTS.map((acc) => (
+                    <div key={acc.bank} className="flex items-center justify-between rounded-lg border bg-background p-2.5">
+                      <div>
+                        <p className="font-bold text-foreground">{acc.bank} · <span className="font-mono">{acc.number}</span></p>
+                        <p className="text-[11px] text-muted-foreground">a.n. {acc.holder}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-primary"
+                        onClick={() => handleCopyText(acc.bank, acc.number, `No. Rek ${acc.bank}`)}
+                      >
+                        {copiedKey === acc.bank ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RINGKASAN TUJUAN */}
+              <div className="space-y-1.5 rounded-xl border bg-card p-3.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Pembayaran</span>
-                  <span className="font-serif text-lg font-bold text-primary">{formatIDR(completedOrder.total)}</span>
+                  <span className="text-muted-foreground">WA Invoice Pemesan</span>
+                  <span className="font-medium text-foreground">{completedOrder.phone}</span>
                 </div>
                 <Separator />
                 <div className="flex items-start gap-1.5 pt-1 text-muted-foreground">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="whitespace-normal break-words leading-relaxed">
-                    <strong className="text-foreground">Tujuan Pengiriman:</strong> {completedOrder.address}
+                    <strong className="text-foreground">Tujuan:</strong> {completedOrder.address}
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5 text-xs leading-relaxed text-muted-foreground">
-                <p className="font-semibold text-foreground">Langkah Selanjutnya:</p>
-                <ol className="mt-1 list-inside list-decimal space-y-1">
-                  <li>Klik tombol WhatsApp di bawah untuk mengirim detail pesanan & meminta rekening/QRIS admin.</li>
-                  <li>Kirim bukti transfer di chat WhatsApp.</li>
-                  <li>Admin akan memverifikasi pembayaran dan mengirimkan <strong>Struk Lunas</strong> ke WhatsApp Anda.</li>
-                </ol>
+              <div className="rounded-xl border border-border/70 bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                <p className="font-semibold text-foreground">Konfirmasi Pembayaran:</p>
+                <p className="mt-0.5">
+                  Setelah transfer sesuai nominal <strong>{formatIDR(completedOrder.total)}</strong>, klik tombol WhatsApp di bawah untuk mengirim bukti transfer. Admin akan segera memverifikasi dan mengirim <strong>Struk Lunas</strong>.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-2 border-t pt-4">
+            <div className="space-y-2 border-t pt-3">
               <Button
                 className="w-full bg-success text-success-foreground hover:bg-success/90"
                 size="lg"
                 onClick={() => {
                   const savedMsg =
                     sessionStorage.getItem(`wa_msg_${completedOrder.id}`) ||
-                    `Halo ${s.settings.storeName}, saya sudah checkout pesanan *${completedOrder.id}* total *${formatIDR(completedOrder.total)}* (Menunggu Pembayaran). Mohon info pembayaran.`;
+                    `Halo ${s.settings.storeName}, saya sudah transfer untuk pesanan *${completedOrder.id}* sebesar *${formatIDR(completedOrder.total)}*. Berikut bukti transfernya.`;
                   window.open(waLink(s.settings.whatsappNumber, savedMsg), "_blank", "noreferrer");
                 }}
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
-                Kirim Notifikasi & Bayar via WA
+                Kirim Bukti Transfer via WA
               </Button>
               <Button
                 variant="outline"
@@ -205,7 +270,6 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="-mx-6 flex-1 space-y-3 overflow-y-auto px-6">
-              {/* INFO MULTI-TUJUAN JIKA ADA LEBIH DARI 1 ALAMAT */}
               {isMultiDestination && (
                 <div className="flex items-start gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs text-primary">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
