@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GreetingCard } from "./GreetingCard";
-import { ADDONS, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
+import { ADDONS, CITIES, SHIPPING_FEE, addonsTotal, buildWaMessage, formatDate, formatIDR, waLink, type Order, type Product } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CARD_TEMPLATES, RIBBONS } from "@/data/floristData";
@@ -31,7 +32,7 @@ const DELIVERY_SLOTS = [
 ];
 
 export function CustomizeDialog({ product, onOpenChange }: { product: Product | null; onOpenChange: (o: boolean) => void }) {
-  const { addToCart, setCartOpen, city, settings, user, recordOrder } = useStore();
+  const { addToCart, setCartOpen, city, setCity, settings, user, recordOrder } = useStore();
   const [to, setTo] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -62,10 +63,13 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
   if (!product) return null;
   const total = (product.price + addonsTotal(addons)) * qty;
+  const currentShipping = SHIPPING_FEE[city] ?? 30000;
+
   const custom = {
     to,
     recipientPhone,
     recipientAddress,
+    recipientCity: city,
     from,
     message,
     ribbon,
@@ -99,7 +103,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       ...custom,
     });
     if (error) return void toast.error(error);
-    toast.success("Ditambahkan ke keranjang");
+    toast.success(`Ditambahkan ke keranjang (Tujuan: ${city})`);
     onOpenChange(false);
     setCartOpen(true);
   };
@@ -107,14 +111,16 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
   const instantOrder = () => {
     if (!validateForm()) return;
     const subtotal = total;
-    const shipping = SHIPPING_FEE[city] ?? 30000;
+    const shipping = currentShipping;
+    const fullAddressWithCity = `${recipientAddress.trim()} (${city})`;
+
     const order: Order = {
       id: "KLD-" + crypto.randomUUID(),
       customerName: user?.name ?? from ?? "Pelanggan",
       customerEmail: user?.email ?? "guest@kalandra.id",
       phone: recipientPhone.trim() || user?.phone || "-",
       city,
-      address: recipientAddress.trim(),
+      address: fullAddressWithCity,
       items: [
         {
           key: crypto.randomUUID(),
@@ -140,6 +146,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
       ``,
       `*Detail Pengiriman & Kartu:*`,
       `• Penerima: ${to.trim()}${recipientPhone.trim() ? ` (${recipientPhone.trim()})` : ""}`,
+      `• Kota Tujuan: ${city} (Ongkir: ${formatIDR(shipping)})`,
       `• Alamat Tujuan: ${recipientAddress.trim()}`,
       `• Sesi Waktu: ${deliverySlot}`,
       `• Pengirim: ${from.trim()}`,
@@ -162,7 +169,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
               <DialogDescription>{product.category} · {formatIDR(product.price)}</DialogDescription>
             </DialogHeader>
 
-            {/* DATA PENERIMA & ALAMAT TUJUAN (MUNCUL DI BAWAH KARTU) */}
+            {/* DATA PENERIMA, KOTA & ALAMAT TUJUAN (TERINTEGRASI ONGKIR) */}
             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 <Truck className="h-3.5 w-3.5" /> Tujuan Pengiriman (Penerima)
@@ -183,6 +190,29 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                   />
                 </div>
               </div>
+
+              {/* DROPDOWN KOTA TUJUAN YANG SINKRON DENGAN ONGKIR */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="recipient-city">Kota Tujuan Pengiriman *</Label>
+                  <span className="text-[11px] font-medium text-primary">
+                    Ongkir: {formatIDR(currentShipping)}
+                  </span>
+                </div>
+                <Select value={city} onValueChange={setCity}>
+                  <SelectTrigger id="recipient-city" className="bg-background">
+                    <SelectValue placeholder="Pilih kota tujuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CITIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c} — Ongkir {formatIDR(SHIPPING_FEE[c] ?? 30000)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="recipient-address">Alamat Lengkap Penerima *</Label>
                 <Textarea
@@ -190,7 +220,7 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                   rows={2}
                   value={recipientAddress}
                   onChange={(e) => setRecipientAddress(e.target.value)}
-                  placeholder="Nama jalan, nomor rumah/gedung, patokan, kecamatan, kota..."
+                  placeholder="Nama jalan, nomor rumah/gedung, patokan, kecamatan..."
                 />
               </div>
             </div>
@@ -364,10 +394,10 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
                 </div>
               </div>
 
-              {/* PREVIEW KARTU DENGAN ALAMAT PENERIMA DI BAGIAN BAWAH */}
+              {/* PREVIEW KARTU DENGAN ALAMAT & KOTA PENERIMA */}
               <GreetingCard
                 to={to}
-                recipientAddress={recipientAddress}
+                recipientAddress={recipientAddress ? `${recipientAddress}, ${city}` : ""}
                 from={from}
                 message={message}
                 ribbon={ribbon}
@@ -377,9 +407,15 @@ export function CustomizeDialog({ product, onOpenChange }: { product: Product | 
 
             {/* CONTAINER TOMBOL */}
             <div className="mt-4 space-y-3 rounded-xl border bg-card p-4 shadow-soft">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total ({qty}x)</span>
-                <span className="font-serif text-2xl font-semibold text-primary">{formatIDR(total)}</span>
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Subtotal ({qty}x)</span>
+                  <span className="font-semibold text-foreground">{formatIDR(total)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Estimasi Ongkir ({city})</span>
+                  <span>+{formatIDR(currentShipping)}</span>
+                </div>
               </div>
               <Button className="w-full" size="lg" onClick={add} disabled={!settings.storeOpen}>
                 <ShoppingBag className="mr-2 h-4 w-4" />Tambah ke Keranjang
