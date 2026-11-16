@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { Minus, Plus, Trash2, ShoppingBag, MessageCircle, CheckCircle2, CreditCard, MapPin, Copy, Check } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, MessageCircle, CheckCircle2, CreditCard, MapPin, Copy, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/lib/store";
-import { ADDONS, buildCartWaMessage, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS, waLink, type Order } from "@/lib/data";
+import { ADDONS, SHIPPING_FEE, buildCartWaMessage, formatDate, formatIDR, itemTotal, ribbonLabel, RIBBONS, waLink, type Order } from "@/lib/data";
 import { cardTemplateLabel } from "@/data/floristData";
+
+type ExtendedCartItem = ReturnType<typeof useStore>["cart"][number] & {
+  recipientAddress?: string;
+  recipientPhone?: string;
+  recipientCity?: string;
+  deliverySlot?: string;
+};
 
 export function CartDrawer() {
   const s = useStore();
@@ -15,28 +22,71 @@ export function CartDrawer() {
 
   if (s.isAdmin) return null;
 
+  const cartItems = s.cart as ExtendedCartItem[];
+
+  // Hitung ongkir: jika tiap item punya kota tujuan unik, jumlahkan ongkir per tujuan unik; jika sama, pakai ongkir kota aktif
+  const uniqueDestinations = Array.from(
+    new Set(
+      cartItems
+        .map((item) => {
+          const itemCity = item.recipientCity || s.city;
+          const itemAddr = item.recipientAddress?.trim() || "";
+          return itemAddr ? `${itemCity}::${itemAddr}` : "";
+        })
+        .filter(Boolean)
+    )
+  );
+
+  const isMultiDestination = uniqueDestinations.length > 1;
+
+  const calculatedShipping = isMultiDestination
+    ? uniqueDestinations.reduce((sum, dest) => {
+        const destCity = dest.split("::")[0];
+        return sum + (SHIPPING_FEE[destCity] ?? s.shippingFee);
+      }, 0)
+    : s.shippingFee;
+
   const handleOpenChange = (open: boolean) => {
     if (!open) setCompletedOrder(null);
     s.setCartOpen(open);
   };
 
   const handleDirectCheckout = () => {
-    // Ambil alamat tujuan & no WA dari item keranjang terbaru jika ada
-    const primaryItem = s.cart[0] as (typeof s.cart)[0] & {
-      recipientAddress?: string;
-      recipientPhone?: string;
-      deliverySlot?: string;
-    };
-    const resolvedAddress = primaryItem?.recipientAddress?.trim() || s.user?.address || "-";
+    const primaryItem = cartItems[0];
+
+    // Gabungkan seluruh alamat tujuan jika multi-alamat, atau 1 alamat jika tujuan tunggal
+    const combinedAddress = isMultiDestination
+      ? cartItems
+          .map((item, idx) => {
+            const c = item.recipientCity || s.city;
+            const a = item.recipientAddress?.trim() || "-";
+            return `${idx + 1}. [${item.name} -> ${item.to}] (${c}) ${a}`;
+          })
+          .join(" | ")
+      : primaryItem?.recipientAddress?.trim()
+      ? `${primaryItem.recipientAddress.trim()} (${primaryItem.recipientCity || s.city})`
+      : s.user?.address || "-";
+
     const resolvedPhone = primaryItem?.recipientPhone?.trim() || s.user?.phone || "-";
 
-    const baseMessage = buildCartWaMessage(s.cart, s.city, s.shippingFee);
+    const baseMessage = buildCartWaMessage(s.cart, s.city, calculatedShipping);
     const order = s.checkout();
     if (!order) return;
 
-    // Pastikan alamat tujuan dan nomor WA penerima tersimpan utuh di order admin
-    order.address = resolvedAddress;
+    // Sinkronkan alamat gabungan, total ongkir multi-tujuan, dan nomor kontak
+    order.address = combinedAddress;
     order.phone = resolvedPhone;
+    order.shipping = calculatedShipping;
+    order.total = order.subtotal + calculatedShipping;
+
+    const destinationLines = cartItems
+      .map((item, idx) => {
+        const c = item.recipientCity || s.city;
+        const a = item.recipientAddress?.trim() || "-";
+        const slot = item.deliverySlot ? ` | Sesi: ${item.deliverySlot}` : "";
+        return `${idx + 1}. ${item.name} -> *${item.to}* (${c})\n   Alamat: ${a}${slot}`;
+      })
+      .join("\n");
 
     const fullWaMessage = [
       `*KONFIRMASI CHECKOUT — ${s.settings.storeName.toUpperCase()}*`,
@@ -45,19 +95,14 @@ export function CartDrawer() {
       ``,
       baseMessage,
       ``,
-      `*Tujuan Pengiriman:*`,
-      `• Alamat: ${resolvedAddress}`,
-      primaryItem?.deliverySlot ? `• Sesi Kirim: ${primaryItem.deliverySlot}` : null,
+      `*Rincian Tujuan Pengiriman (${uniqueDestinations.length || 1} Lokasi):*`,
+      destinationLines,
       ``,
       `Mohon info nomor rekening/QRIS untuk penyelesaian pembayaran. Terima kasih!`,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    ].join("\n");
 
     setCompletedOrder(order);
     toast.success(`Pesanan ${order.id} berhasil dibuat!`);
-
-    // Simpan pesan siap kirim ke sessionStorage sementara untuk tombol kirim WA
     sessionStorage.setItem(`wa_msg_${order.id}`, fullWaMessage);
   };
 
@@ -111,8 +156,8 @@ export function CartDrawer() {
                 <Separator />
                 <div className="flex items-start gap-1.5 pt-1 text-muted-foreground">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span>
-                    <strong className="text-foreground">{completedOrder.city}:</strong> {completedOrder.address}
+                  <span className="whitespace-normal break-words leading-relaxed">
+                    <strong className="text-foreground">Tujuan Pengiriman:</strong> {completedOrder.address}
                   </span>
                 </div>
               </div>
@@ -153,15 +198,25 @@ export function CartDrawer() {
               </Button>
             </div>
           </div>
-        ) : s.cart.length === 0 ? (
+        ) : cartItems.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
             <ShoppingBag className="h-10 w-10" />Keranjang masih kosong
           </div>
         ) : (
           <>
-            <div className="-mx-6 flex-1 space-y-4 overflow-y-auto px-6">
-              {s.cart.map((i) => {
-                const itemWithAddr = i as typeof i & { recipientAddress?: string; deliverySlot?: string };
+            <div className="-mx-6 flex-1 space-y-3 overflow-y-auto px-6">
+              {/* INFO MULTI-TUJUAN JIKA ADA LEBIH DARI 1 ALAMAT */}
+              {isMultiDestination && (
+                <div className="flex items-start gap-2 rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs text-primary">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p className="leading-snug">
+                    Terdapat <strong>{uniqueDestinations.length} alamat tujuan berbeda</strong> dalam keranjang. Ongkir otomatis disesuaikan untuk masing-masing tujuan pengiriman.
+                  </p>
+                </div>
+              )}
+
+              {cartItems.map((i) => {
+                const itemCity = i.recipientCity || s.city;
                 return (
                   <div key={i.key} className="flex gap-3 rounded-xl border bg-card p-3">
                     <img src={i.image} alt={i.name} className="h-20 w-20 rounded-lg object-cover" loading="lazy" />
@@ -178,12 +233,15 @@ export function CartDrawer() {
                           style={{ backgroundColor: RIBBONS.find((r) => r.id === i.ribbon)?.hex ?? RIBBONS[0].hex }}
                         />
                         Pita {ribbonLabel(i.ribbon)} · Kirim {formatDate(i.deliveryDate)}
-                        {itemWithAddr.deliverySlot ? ` (${itemWithAddr.deliverySlot})` : ""}
+                        {i.deliverySlot ? ` (${i.deliverySlot})` : ""}
                       </p>
                       <p className="truncate text-xs italic text-muted-foreground">"{i.message || "—"}" — untuk {i.to}</p>
-                      {itemWithAddr.recipientAddress && (
-                        <p className="line-clamp-1 flex items-center gap-1 text-[11px] text-primary">
-                          <MapPin className="h-3 w-3 shrink-0" /> {itemWithAddr.recipientAddress}
+                      {i.recipientAddress && (
+                        <p className="line-clamp-2 flex items-start gap-1 text-[11px] leading-snug text-primary">
+                          <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span>
+                            <strong>{itemCity}:</strong> {i.recipientAddress}
+                          </span>
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground">Kartu: {cardTemplateLabel(i.cardTemplate)}</p>
@@ -216,13 +274,15 @@ export function CartDrawer() {
                 <span>{formatIDR(s.cartSubtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Ongkir ({s.city})</span>
-                <span>{formatIDR(s.shippingFee)}</span>
+                <span className="text-muted-foreground">
+                  {isMultiDestination ? `Ongkir (${uniqueDestinations.length} Tujuan)` : `Ongkir (${s.city})`}
+                </span>
+                <span>{formatIDR(calculatedShipping)}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-base font-semibold">
                 <span>Total</span>
-                <span className="font-serif text-xl text-primary">{formatIDR(s.cartSubtotal + s.shippingFee)}</span>
+                <span className="font-serif text-xl text-primary">{formatIDR(s.cartSubtotal + calculatedShipping)}</span>
               </div>
 
               <Button className="w-full" size="lg" onClick={handleDirectCheckout} disabled={!s.settings.storeOpen}>
@@ -234,8 +294,12 @@ export function CartDrawer() {
                 variant="outline"
                 className="w-full border-success/40 text-success hover:bg-success/10 hover:text-success"
                 onClick={() => {
-                  const message = buildCartWaMessage(s.cart, s.city, s.shippingFee);
-                  window.open(waLink(s.settings.whatsappNumber, `Halo ${s.settings.storeName}, saya ingin tanya-tanya dulu mengenai pesanan ini:\n\n${message}`), "_blank", "noreferrer");
+                  const message = buildCartWaMessage(s.cart, s.city, calculatedShipping);
+                  window.open(
+                    waLink(s.settings.whatsappNumber, `Halo ${s.settings.storeName}, saya ingin tanya-tanya dulu mengenai pesanan ini:\n\n${message}`),
+                    "_blank",
+                    "noreferrer"
+                  );
                 }}
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
