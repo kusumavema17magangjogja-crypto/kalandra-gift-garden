@@ -46,10 +46,8 @@ const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
 
-// Gabungkan status bawaan + opsi "Dibatalkan" jika belum ada di ORDER_STATUSES
 const ALL_STATUSES = Array.from(new Set([...ORDER_STATUSES, "Dibatalkan"])) as OrderStatus[];
 
-// Helper menyusun teks Invoice WA siap kirim
 function buildInvoiceWaText(o: Order, storeName: string) {
   const itemLines = o.items
     .map((item, idx) => {
@@ -143,7 +141,6 @@ function Admin() {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobile(true)} aria-label="Menu"><Menu /></Button>
           <h1 className="font-serif text-2xl text-primary">{MENU.find((m) => m.id === view)?.label}</h1>
           <div className="ml-auto flex items-center gap-2">
-            {/* POPOVER NOTIFIKASI PESANAN BARU */}
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi Pesanan Baru">
@@ -355,7 +352,6 @@ function Orders() {
     const prevStatus = order.status as string;
     const targetStatus = nextStatus as string;
 
-    // Jika status diubah menjadi Dibatalkan (dan sebelumnya bukan Dibatalkan), kembalikan stok produk
     if (targetStatus === "Dibatalkan" && prevStatus !== "Dibatalkan") {
       order.items.forEach((item) => {
         const prod = products.find((p) => p.id === item.productId);
@@ -698,7 +694,6 @@ function Orders() {
 
           {invoice && (
             <div className="space-y-4">
-              {/* AREA STRUK SIAP CETAK */}
               <div id="printable-invoice" className="space-y-4 rounded-xl border bg-background p-5 text-sm shadow-xs">
                 <div className="border-b border-dashed pb-3 text-center">
                   <p className="font-serif text-xl font-bold text-primary">{settings.storeName}</p>
@@ -777,7 +772,6 @@ function Orders() {
                 </p>
               </div>
 
-              {/* TOMBOL AKSI: CETAK PDF & KIRIM INVOICE KE WA */}
               <div className="grid grid-cols-2 gap-2.5">
                 <Button variant="outline" className="w-full" onClick={handlePrintInvoice}>
                   <Printer className="mr-1.5 h-4 w-4" />
@@ -885,26 +879,300 @@ function Products() {
   );
 }
 
+interface CustomerRecord {
+  key: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  source: "Terdaftar" | "Pesanan" | "Manual";
+}
+
 function Customers() {
   const { users, orders } = useStore();
-  const rows = users.filter((u) => u.role === "customer").map((u) => {
-    const mine = orders.filter((o) => o.customerEmail === u.email);
-    return { ...u, count: mine.length, ltv: mine.reduce((t, o) => t + o.total, 0) };
+  const [q, setQ] = useState("");
+  const [manualCustomers, setManualCustomers] = useState<CustomerRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("kalandra_manual_customers");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
+  const [overrides, setOverrides] = useState<Record<string, Partial<CustomerRecord>>>(() => {
+    try {
+      const saved = localStorage.getItem("kalandra_customer_overrides");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", city: CITIES[0] });
+
+  const saveManualStorage = (next: CustomerRecord[]) => {
+    setManualCustomers(next);
+    localStorage.setItem("kalandra_manual_customers", JSON.stringify(next));
+  };
+
+  const saveOverrideStorage = (next: Record<string, Partial<CustomerRecord>>) => {
+    setOverrides(next);
+    localStorage.setItem("kalandra_customer_overrides", JSON.stringify(next));
+  };
+
+  // Gabungkan pelanggan dari: 1) Akun terdaftar (users), 2) Pemesan di Orders, 3) Input manual Admin
+  const mergedCustomers = useMemo(() => {
+    const map = new Map<string, CustomerRecord>();
+
+    // 1. Dari users terdaftar
+    users
+      .filter((u) => u.role === "customer")
+      .forEach((u) => {
+        const key = u.email.toLowerCase();
+        map.set(key, {
+          key,
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          city: u.city,
+          source: "Terdaftar",
+        });
+      });
+
+    // 2. Otomatis dari pesanan masuk (orders)
+    orders.forEach((o) => {
+      const cleanPhone = (o.phone || "").replace(/\D/g, "");
+      const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
+      const key = !isGuestEmail
+        ? o.customerEmail.toLowerCase()
+        : cleanPhone
+        ? `phone:${cleanPhone}`
+        : `name:${o.customerName.trim().toLowerCase()}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          name: o.customerName,
+          email: isGuestEmail ? "-" : o.customerEmail,
+          phone: cleanPhone || "-",
+          city: o.city,
+          source: "Pesanan",
+        });
+      }
+    });
+
+    // 3. Dari tambahan manual Admin
+    manualCustomers.forEach((m) => {
+      map.set(m.key, m);
+    });
+
+    // Terapkan hasil edit admin (overrides) & hitung jumlah pesanan + total belanja
+    return Array.from(map.values())
+      .map((c) => {
+        const patched = { ...c, ...(overrides[c.key] ?? {}) };
+        const normPhone = patched.phone.replace(/\D/g, "");
+        const mine = orders.filter((o) => {
+          if ((o.status as string) === "Dibatalkan") return false;
+          const oPhone = (o.phone || "").replace(/\D/g, "");
+          const matchEmail = patched.email !== "-" && o.customerEmail.toLowerCase() === patched.email.toLowerCase();
+          const matchPhone = normPhone && oPhone && (oPhone === normPhone || oPhone.endsWith(normPhone.slice(-9)));
+          const matchName = o.customerName.trim().toLowerCase() === patched.name.trim().toLowerCase();
+          return matchEmail || matchPhone || matchName;
+        });
+
+        return {
+          ...patched,
+          count: mine.length,
+          ltv: mine.reduce((t, o) => t + o.total, 0),
+        };
+      })
+      .filter((c) =>
+        (c.name + c.email + c.phone + c.city).toLowerCase().includes(q.toLowerCase())
+      );
+  }, [users, orders, manualCustomers, overrides, q]);
+
+  const openAddDialog = () => {
+    setEditingKey(null);
+    setForm({ name: "", email: "", phone: "", city: CITIES[0] });
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (c: CustomerRecord) => {
+    setEditingKey(c.key);
+    setForm({
+      name: c.name,
+      email: c.email === "-" ? "" : c.email,
+      phone: c.phone === "-" ? "" : c.phone,
+      city: c.city || CITIES[0],
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSaveCustomer = () => {
+    if (!form.name.trim()) return void toast.error("Nama pelanggan wajib diisi");
+    const cleanPhone = form.phone.replace(/\D/g, "");
+    if (!cleanPhone) return void toast.error("Nomor WhatsApp wajib diisi");
+
+    if (editingKey) {
+      // Update pelanggan yang sudah ada
+      const updatedFields: Partial<CustomerRecord> = {
+        name: form.name.trim(),
+        email: form.email.trim() || "-",
+        phone: cleanPhone,
+        city: form.city,
+      };
+      if (manualCustomers.some((m) => m.key === editingKey)) {
+        saveManualStorage(
+          manualCustomers.map((m) => (m.key === editingKey ? { ...m, ...updatedFields } : m))
+        );
+      } else {
+        saveOverrideStorage({ ...overrides, [editingKey]: updatedFields });
+      }
+      toast.success("Data pelanggan diperbarui");
+    } else {
+      // Tambah pelanggan baru secara manual
+      const newKey = `manual:${Date.now()}`;
+      const newRecord: CustomerRecord = {
+        key: newKey,
+        name: form.name.trim(),
+        email: form.email.trim() || "-",
+        phone: cleanPhone,
+        city: form.city,
+        source: "Manual",
+      };
+      saveManualStorage([newRecord, ...manualCustomers]);
+      toast.success("Pelanggan baru ditambahkan");
+    }
+
+    setDialogOpen(false);
+  };
+
   return (
     <Panel>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Cari nama pelanggan, nomor WhatsApp, email, atau kota..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <Button onClick={openAddDialog}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Tambah Pelanggan
+        </Button>
+      </div>
+
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead><tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">{["Nama", "Email", "WhatsApp", "Kota", "Pesanan", "Total Belanja", ""].map((h) => <th key={h} className="px-2 py-3 font-semibold">{h}</th>)}</tr></thead>
-          <tbody>{rows.map((u) => (
-            <tr key={u.email} className="border-b last:border-0">
-              <td className="px-2 py-3 font-medium">{u.name}</td><td className="px-2 py-3">{u.email}</td><td className="px-2 py-3">+{u.phone}</td>
-              <td className="px-2 py-3">{u.city}</td><td className="px-2 py-3">{u.count}</td><td className="px-2 py-3 font-semibold text-primary">{formatIDR(u.ltv)}</td>
-              <td className="px-2 py-3"><Button asChild size="sm" variant="outline" className="text-success hover:text-success"><a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari Kalandra!`)} target="_blank" rel="noreferrer"><MessageCircle className="mr-1 h-3.5 w-3.5" />Chat</a></Button></td>
+        <table className="w-full min-w-[820px] text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+              {["Nama", "Email", "WhatsApp", "Kota", "Pesanan", "Total Belanja", "Aksi"].map((h) => (
+                <th key={h} className="px-2 py-3 font-semibold">{h}</th>
+              ))}
             </tr>
-          ))}</tbody>
+          </thead>
+          <tbody>
+            {mergedCustomers.map((u) => {
+              const formattedPhone = u.phone && u.phone !== "-"
+                ? (u.phone.startsWith("62") ? `+${u.phone}` : u.phone)
+                : "-";
+              return (
+                <tr key={u.key} className="border-b last:border-0 hover:bg-secondary/40">
+                  <td className="px-2 py-3">
+                    <p className="font-medium">{u.name}</p>
+                    <span className="text-[10px] text-muted-foreground">{u.source}</span>
+                  </td>
+                  <td className="px-2 py-3 text-muted-foreground">{u.email}</td>
+                  <td className="px-2 py-3">{formattedPhone}</td>
+                  <td className="px-2 py-3">{u.city}</td>
+                  <td className="px-2 py-3">{u.count}</td>
+                  <td className="px-2 py-3 font-semibold text-primary">{formatIDR(u.ltv)}</td>
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => openEditDialog(u)}>
+                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
+                      </Button>
+                      {u.phone && u.phone !== "-" && (
+                        <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs text-success hover:text-success">
+                          <a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)} target="_blank" rel="noreferrer">
+                            <MessageCircle className="mr-1 h-3.5 w-3.5" />Chat
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {mergedCustomers.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-10 text-center text-muted-foreground">
+                  Tidak ada data pelanggan yang cocok.
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
       </div>
+
+      {/* MODAL TAMBAH / EDIT PELANGGAN */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">
+              {editingKey ? "Edit Data Pelanggan" : "Tambah Pelanggan Baru"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-name">Nama Pelanggan *</Label>
+              <Input
+                id="cust-name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Rizaaa"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-phone">Nomor WhatsApp *</Label>
+              <Input
+                id="cust-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="0857xxxxxxxx atau 62857xxxxxxxx"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-email">Email (Opsional)</Label>
+              <Input
+                id="cust-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="pelanggan@email.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kota Domisili / Tujuan</Label>
+              <Select value={form.city} onValueChange={(v) => setForm({ ...form, city: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveCustomer}>{editingKey ? "Simpan Perubahan" : "Tambah Pelanggan"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Panel>
   );
 }
