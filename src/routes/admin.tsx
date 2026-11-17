@@ -141,9 +141,9 @@ function Admin() {
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-56")}>
         <div className="flex items-center gap-2 border-b border-sidebar-border p-4">
-          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />{!collapsed && <span className="font-serif text-xl">{settings.storeName} Admin</span>}
+          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />{!collapsed && <span className="font-serif text-lg leading-tight">{settings.storeName} Admin</span>}
         </div>
         <Nav compact={collapsed} />
         <button onClick={() => setCollapsed(!collapsed)} className="mt-auto flex items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70" aria-label="Ciutkan sidebar">
@@ -503,13 +503,13 @@ function Orders() {
     <Panel>
       <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari nama pelanggan, Order ID, atau alamat tujuan" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <Select value={status} onValueChange={setStatus}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
+        <Select value={status} onValueChange={setStatus}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-        <Select value={city} onValueChange={setCity}><SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
+        <Select value={city} onValueChange={setCity}><SelectTrigger className="md:w-40"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[1220px] text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
@@ -523,32 +523,32 @@ function Orders() {
               const isCancelled = (o.status as string) === "Dibatalkan";
               return (
                 <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
-                  <td className="px-2 py-3 font-semibold whitespace-nowrap">{o.id}</td>
+                  <td className="max-w-[125px] truncate px-2 py-3 font-semibold" title={o.id}>{o.id}</td>
                   <td className="px-2 py-3">
                     <p className="font-medium">{o.customerName}</p>
                     {o.phone && o.phone !== "-" && (
                       <p className="text-xs text-muted-foreground">{o.phone}</p>
                     )}
                   </td>
-                  <td className="max-w-44 px-2 py-3">
-                    <p className="line-clamp-2">{o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
+                  <td className="max-w-[150px] px-2 py-3">
+                    <p className="line-clamp-2 text-xs">{o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
                   </td>
-                  <td className="max-w-60 px-2 py-3">
+                  <td className="max-w-[190px] px-2 py-3">
                     <div className="flex items-start gap-1 text-xs">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      <div>
+                      <div className="min-w-0">
                         <span className="font-semibold text-primary">{o.city}</span>
-                        <p className="whitespace-normal break-words leading-snug text-muted-foreground">
+                        <p className="line-clamp-2 whitespace-normal break-words leading-snug text-muted-foreground" title={o.address}>
                           {o.address && o.address !== "-" ? o.address : "Belum diisi"}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-3 whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
+                  <td className="px-2 py-3 text-xs whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
                   <td className="px-2 py-3 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
                   <td className="px-2 py-3">
                     <Select value={o.status} onValueChange={(v) => handleStatusChange(o, v as OrderStatus)}>
-                      <SelectTrigger className="h-8 w-44 border-0 bg-transparent p-0 shadow-none">
+                      <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none">
                         {isCancelled ? (
                           <span className="inline-flex items-center rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-semibold text-destructive">
                             Dibatalkan
@@ -561,34 +561,38 @@ function Orders() {
                     </Select>
                   </td>
                   <td className="px-2 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setCard(o)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" />Kartu
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setInvoice(o)}>
-                        <Receipt className="mr-1 h-3.5 w-3.5" />Struk
-                      </Button>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}>
+                          <Pencil className="mr-1 h-3 w-3" />Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteTarget(o)}
+                          title="Hapus Pesanan"
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />Hapus
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setCard(o)}>
+                          <Eye className="mr-1 h-3 w-3" />Kartu
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setInvoice(o)}>
+                          <Receipt className="mr-1 h-3 w-3" />Struk
+                        </Button>
+                      </div>
                       <Button
                         asChild
                         size="sm"
-                        className="h-8 bg-success px-2.5 text-xs text-success-foreground hover:bg-success/90"
+                        className="h-7 w-full bg-success px-2 text-xs text-success-foreground hover:bg-success/90"
                         title="Kirim Struk / Invoice langsung ke WhatsApp"
                       >
                         <a href={waInvoiceHref} target="_blank" rel="noreferrer">
-                          <MessageCircle className="mr-1 h-3.5 w-3.5" />Kirim WA
+                          <MessageCircle className="mr-1 h-3 w-3" />Kirim WA
                         </a>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteTarget(o)}
-                        title="Hapus Pesanan"
-                      >
-                        <Trash2 className="mr-1 h-3.5 w-3.5" />Hapus
                       </Button>
                     </div>
                   </td>
@@ -1133,24 +1137,24 @@ function Customers() {
 
   return (
     <Panel>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Cari nama pelanggan, nomor WhatsApp, email, atau kota..."
+            placeholder="Cari nama pelanggan, WA, email, atau kota..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <Button onClick={openAddDialog}>
+        <Button onClick={openAddDialog} className="shrink-0">
           <Plus className="mr-1.5 h-4 w-4" />
           Tambah Pelanggan
         </Button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Nama", "Email", "WhatsApp", "Kota", "Pesanan", "Total Belanja", "Aksi"].map((h) => (
@@ -1169,20 +1173,20 @@ function Customers() {
                     <p className="font-medium">{u.name}</p>
                     <span className="text-[10px] text-muted-foreground">{u.source}</span>
                   </td>
-                  <td className="px-2 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-2 py-3">{formattedPhone}</td>
-                  <td className="px-2 py-3">{u.city}</td>
-                  <td className="px-2 py-3">{u.count}</td>
-                  <td className="px-2 py-3 font-semibold text-primary">{formatIDR(u.ltv)}</td>
+                  <td className="px-2 py-3 text-xs text-muted-foreground">{u.email}</td>
+                  <td className="px-2 py-3 text-xs">{formattedPhone}</td>
+                  <td className="px-2 py-3 text-xs">{u.city}</td>
+                  <td className="px-2 py-3 text-center">{u.count}</td>
+                  <td className="px-2 py-3 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
                   <td className="px-2 py-3">
                     <div className="flex items-center gap-1.5">
-                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => openEditDialog(u)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => openEditDialog(u)}>
+                        <Pencil className="mr-1 h-3 w-3" />Edit
                       </Button>
                       {u.phone && u.phone !== "-" && (
-                        <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs text-success hover:text-success">
+                        <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs text-success hover:text-success">
                           <a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)} target="_blank" rel="noreferrer">
-                            <MessageCircle className="mr-1 h-3.5 w-3.5" />Chat
+                            <MessageCircle className="mr-1 h-3 w-3" />Chat
                           </a>
                         </Button>
                       )}
