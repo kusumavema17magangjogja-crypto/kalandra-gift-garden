@@ -19,7 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/shop/StatusBadge";
 import { GreetingCard } from "@/components/shop/GreetingCard";
 import { useStore } from "@/lib/store";
-import { ADDONS, CATEGORIES, CITIES, IMAGES, ORDER_STATUSES, addonsTotal, formatDate, formatIDR, ribbonLabel, waLink, type Order, type OrderStatus, type Product } from "@/lib/data";
+import { ADDONS, CATEGORIES, CITIES, IMAGES, ORDER_STATUSES, SHIPPING_FEE, addonsTotal, formatDate, formatIDR, ribbonLabel, waLink, type Order, type OrderStatus, type Product } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
@@ -45,6 +45,9 @@ const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "customers", label: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
+
+// Gabungkan status bawaan + opsi "Dibatalkan" jika belum ada di ORDER_STATUSES
+const ALL_STATUSES = Array.from(new Set([...ORDER_STATUSES, "Dibatalkan"])) as OrderStatus[];
 
 // Helper menyusun teks Invoice WA siap kirim
 function buildInvoiceWaText(o: Order, storeName: string) {
@@ -285,7 +288,7 @@ function downloadCSV(orders: Order[]) {
 
 function Overview({ go }: { go: (v: View) => void }) {
   const { orders } = useStore();
-  const revenue = 48750000 + orders.filter((o) => o.status !== "Menunggu Pembayaran").reduce((t, o) => t + o.total, 0) - 9_000_000;
+  const revenue = 48750000 + orders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
   const active = orders.filter((o) => o.status === "Sedang Dirangkai").length;
   const kpis = [
     { label: "Total Pendapatan Bulan Ini", value: formatIDR(revenue), trend: 12.4 },
@@ -335,16 +338,59 @@ function Overview({ go }: { go: (v: View) => void }) {
 }
 
 function Orders() {
-  const { orders, setOrderStatus, settings } = useStore();
+  const { orders, setOrderStatus, settings, products, saveProduct } = useStore();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [city, setCity] = useState<string>("all");
   const [card, setCard] = useState<Order | null>(null);
   const [invoice, setInvoice] = useState<Order | null>(null);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [, forceRefresh] = useState(0);
 
   const list = orders.filter((o) =>
     (status === "all" || o.status === status) && (city === "all" || o.city === city) &&
     (o.customerName + o.id + (o.address || "")).toLowerCase().includes(q.toLowerCase()));
+
+  const handleStatusChange = (order: Order, nextStatus: OrderStatus) => {
+    const prevStatus = order.status as string;
+    const targetStatus = nextStatus as string;
+
+    // Jika status diubah menjadi Dibatalkan (dan sebelumnya bukan Dibatalkan), kembalikan stok produk
+    if (targetStatus === "Dibatalkan" && prevStatus !== "Dibatalkan") {
+      order.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          saveProduct({ ...prod, stock: prod.stock + item.qty });
+        }
+      });
+      toast.info(`Pesanan ${order.id} dibatalkan & stok produk dikembalikan`);
+    } else {
+      toast.success(`${order.id} → ${nextStatus}`);
+    }
+
+    setOrderStatus(order.id, nextStatus);
+  };
+
+  const handleSaveEditedOrder = () => {
+    if (!editOrder) return;
+    if (!editOrder.customerName.trim()) {
+      return void toast.error("Nama pemesan wajib diisi");
+    }
+    const target = orders.find((o) => o.id === editOrder.id);
+    if (target) {
+      target.customerName = editOrder.customerName.trim();
+      target.phone = editOrder.phone.trim() || "-";
+      target.city = editOrder.city;
+      target.address = editOrder.address.trim() || "-";
+      target.deliveryDate = editOrder.deliveryDate;
+      target.shipping = SHIPPING_FEE[editOrder.city] ?? target.shipping;
+      target.total = target.subtotal + target.shipping;
+      target.items = editOrder.items;
+    }
+    forceRefresh((n) => n + 1);
+    toast.success(`Perubahan pada ${editOrder.id} disimpan`);
+    setEditOrder(null);
+  };
 
   const handlePrintInvoice = () => {
     const el = document.getElementById("printable-invoice");
@@ -403,12 +449,12 @@ function Orders() {
       <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari nama pelanggan, Order ID, atau alamat tujuan" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={status} onValueChange={setStatus}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+          <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
         <Select value={city} onValueChange={setCity}><SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-sm">
+        <table className="w-full min-w-[1160px] text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
@@ -419,8 +465,9 @@ function Orders() {
           <tbody>
             {list.map((o) => {
               const waInvoiceHref = waLink(o.phone, buildInvoiceWaText(o, settings.storeName));
+              const isCancelled = (o.status as string) === "Dibatalkan";
               return (
-                <tr key={o.id} className="border-b align-top last:border-0 hover:bg-secondary/50">
+                <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
                   <td className="px-2 py-3 font-semibold whitespace-nowrap">{o.id}</td>
                   <td className="px-2 py-3">
                     <p className="font-medium">{o.customerName}</p>
@@ -445,13 +492,24 @@ function Orders() {
                   <td className="px-2 py-3 whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
                   <td className="px-2 py-3 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
                   <td className="px-2 py-3">
-                    <Select value={o.status} onValueChange={(v) => { setOrderStatus(o.id, v as OrderStatus); toast.success(`${o.id} → ${v}`); }}>
-                      <SelectTrigger className="h-8 w-44 border-0 bg-transparent p-0 shadow-none"><StatusBadge status={o.status} /></SelectTrigger>
-                      <SelectContent>{ORDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    <Select value={o.status} onValueChange={(v) => handleStatusChange(o, v as OrderStatus)}>
+                      <SelectTrigger className="h-8 w-44 border-0 bg-transparent p-0 shadow-none">
+                        {isCancelled ? (
+                          <span className="inline-flex items-center rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-semibold text-destructive">
+                            Dibatalkan
+                          </span>
+                        ) : (
+                          <StatusBadge status={o.status} />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
                   <td className="px-2 py-3">
                     <div className="flex flex-wrap items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}>
+                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
+                      </Button>
                       <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => setCard(o)}>
                         <Eye className="mr-1 h-3.5 w-3.5" />Kartu
                       </Button>
@@ -478,17 +536,141 @@ function Orders() {
         </table>
       </div>
 
+      {/* MODAL EDIT DATA PESANAN */}
+      <Dialog open={!!editOrder} onOpenChange={(o) => !o && setEditOrder(null)}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-primary">Edit Pesanan · {editOrder?.id}</DialogTitle>
+          </DialogHeader>
+          {editOrder && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-cust-name">Nama Pemesan</Label>
+                  <Input
+                    id="edit-cust-name"
+                    value={editOrder.customerName}
+                    onChange={(e) => setEditOrder({ ...editOrder, customerName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-cust-phone">No. WA Pemesan</Label>
+                  <Input
+                    id="edit-cust-phone"
+                    value={editOrder.phone}
+                    onChange={(e) => setEditOrder({ ...editOrder, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Kota Tujuan Pengiriman</Label>
+                  <Select value={editOrder.city} onValueChange={(v) => setEditOrder({ ...editOrder, city: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CITIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c} ({formatIDR(SHIPPING_FEE[c] ?? 30000)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-delivery-date">Tanggal Pengiriman</Label>
+                  <Input
+                    id="edit-delivery-date"
+                    type="date"
+                    value={editOrder.deliveryDate ? editOrder.deliveryDate.slice(0, 10) : ""}
+                    onChange={(e) =>
+                      setEditOrder({
+                        ...editOrder,
+                        deliveryDate: e.target.value ? new Date(e.target.value).toISOString() : editOrder.deliveryDate,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-order-address">Alamat Lengkap Tujuan Pengiriman</Label>
+                <Textarea
+                  id="edit-order-address"
+                  rows={2}
+                  value={editOrder.address === "-" ? "" : editOrder.address}
+                  onChange={(e) => setEditOrder({ ...editOrder, address: e.target.value })}
+                  placeholder="Jalan, nomor rumah/gedung, patokan, No. HP penerima..."
+                />
+              </div>
+
+              <div className="space-y-3 border-t pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Detail Penerima & Kartu Ucapan
+                </p>
+                {editOrder.items.map((item, idx) => (
+                  <div key={item.key} className="space-y-2 rounded-xl border bg-muted/20 p-3">
+                    <p className="text-xs font-semibold text-primary">{item.name} ({item.qty}x)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Untuk (Penerima)</Label>
+                        <Input
+                          value={item.to}
+                          onChange={(e) => {
+                            const updated = [...editOrder.items];
+                            updated[idx] = { ...item, to: e.target.value };
+                            setEditOrder({ ...editOrder, items: updated });
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Dari (Pengirim)</Label>
+                        <Input
+                          value={item.from}
+                          onChange={(e) => {
+                            const updated = [...editOrder.items];
+                            updated[idx] = { ...item, from: e.target.value };
+                            setEditOrder({ ...editOrder, items: updated });
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Isi Pesan Kartu</Label>
+                      <Textarea
+                        rows={2}
+                        value={item.message}
+                        onChange={(e) => {
+                          const updated = [...editOrder.items];
+                          updated[idx] = { ...item, message: e.target.value };
+                          setEditOrder({ ...editOrder, items: updated });
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOrder(null)}>Batal</Button>
+            <Button onClick={handleSaveEditedOrder}>Simpan Perubahan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* MODAL PRATINJAU KARTU UCAPAN DENGAN ALAMAT TUJUAN PENGIRIMAN */}
       <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
         <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">Kartu Ucapan · {card?.id}</DialogTitle></DialogHeader>
           {card?.items.map((i) => {
             const itemExt = i as typeof i & { recipientAddress?: string; recipientCity?: string; recipientPhone?: string };
-            const resolvedAddr = itemExt.recipientAddress
-              ? `${itemExt.recipientAddress}${itemExt.recipientCity ? ` (${itemExt.recipientCity})` : ""}${itemExt.recipientPhone ? ` · HP: ${itemExt.recipientPhone}` : ""}`
-              : card.address && card.address !== "-"
-              ? card.address
-              : `Area Pengiriman ${card.city}`;
+            const resolvedAddr =
+              card.address && card.address !== "-"
+                ? card.address
+                : itemExt.recipientAddress
+                ? `${itemExt.recipientAddress}${itemExt.recipientCity ? ` (${itemExt.recipientCity})` : ""}${itemExt.recipientPhone ? ` · HP: ${itemExt.recipientPhone}` : ""}`
+                : `Area Pengiriman ${card.city}`;
 
             return (
               <div key={i.key} className="space-y-2">
