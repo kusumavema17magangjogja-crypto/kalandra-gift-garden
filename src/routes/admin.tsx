@@ -889,7 +889,7 @@ interface CustomerRecord {
 }
 
 function Customers() {
-  const { users, orders } = useStore();
+  const { users, orders, settings } = useStore();
   const [q, setQ] = useState("");
   const [manualCustomers, setManualCustomers] = useState<CustomerRecord[]>(() => {
     try {
@@ -921,11 +921,9 @@ function Customers() {
     localStorage.setItem("kalandra_customer_overrides", JSON.stringify(next));
   };
 
-  // Gabungkan pelanggan dari: 1) Akun terdaftar (users), 2) Pemesan di Orders, 3) Input manual Admin
   const mergedCustomers = useMemo(() => {
     const map = new Map<string, CustomerRecord>();
 
-    // 1. Dari users terdaftar
     users
       .filter((u) => u.role === "customer")
       .forEach((u) => {
@@ -940,7 +938,6 @@ function Customers() {
         });
       });
 
-    // 2. Otomatis dari pesanan masuk (orders)
     orders.forEach((o) => {
       const cleanPhone = (o.phone || "").replace(/\D/g, "");
       const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
@@ -962,12 +959,10 @@ function Customers() {
       }
     });
 
-    // 3. Dari tambahan manual Admin
     manualCustomers.forEach((m) => {
       map.set(m.key, m);
     });
 
-    // Terapkan hasil edit admin (overrides) & hitung jumlah pesanan + total belanja
     return Array.from(map.values())
       .map((c) => {
         const patched = { ...c, ...(overrides[c.key] ?? {}) };
@@ -1015,7 +1010,6 @@ function Customers() {
     if (!cleanPhone) return void toast.error("Nomor WhatsApp wajib diisi");
 
     if (editingKey) {
-      // Update pelanggan yang sudah ada
       const updatedFields: Partial<CustomerRecord> = {
         name: form.name.trim(),
         email: form.email.trim() || "-",
@@ -1031,7 +1025,6 @@ function Customers() {
       }
       toast.success("Data pelanggan diperbarui");
     } else {
-      // Tambah pelanggan baru secara manual
       const newKey = `manual:${Date.now()}`;
       const newRecord: CustomerRecord = {
         key: newKey,
