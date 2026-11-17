@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Leaf, Sparkles, Heart, MapPin, ExternalLink, Printer } from "lucide-react";
 import { RIBBONS, CARD_TEMPLATES } from "@/data/floristData";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export function GreetingCard({
   cardTemplate?: string | undefined;
   className?: string;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const r = RIBBONS.find((x) => x.id === ribbon) ?? RIBBONS[0];
   const template = CARD_TEMPLATES.find((t) => t.id === cardTemplate) ?? CARD_TEMPLATES[0];
 
@@ -38,7 +40,7 @@ export function GreetingCard({
     : "#";
 
   const handlePrintCard = () => {
-    const cardEl = document.getElementById("printable-greeting-card");
+    const cardEl = cardRef.current;
     if (!cardEl) return void window.print();
 
     const printWindow = window.open("", "_blank", "width=600,height=800");
@@ -65,7 +67,7 @@ export function GreetingCard({
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            #printable-greeting-card {
+            .printable-card-target {
               width: 100%;
               max-width: 440px;
               box-shadow: none !important;
@@ -92,9 +94,9 @@ export function GreetingCard({
   return (
     <div className="space-y-2.5">
       <div
-        id="printable-greeting-card"
+        ref={cardRef}
         className={cn(
-          "greeting-card relative overflow-hidden rounded-2xl border-2 border-[#e7dec8] bg-[#fbf9f4] p-7 pt-12 shadow-2xl transition-all duration-300",
+          "printable-card-target greeting-card relative overflow-hidden rounded-2xl border-2 border-[#e7dec8] bg-[#fbf9f4] p-7 pt-12 shadow-2xl transition-all duration-300",
           template?.className,
           className
         )}
@@ -184,7 +186,7 @@ export function GreetingCard({
             </p>
           </div>
 
-          {/* Alamat Tujuan Pengiriman Dipindah ke Bawah */}
+          {/* Alamat Tujuan Pengiriman (Label Paket di Bagian Bawah) */}
           {displayAddress && (
             <div className="mx-auto mt-4 w-full max-w-sm px-2">
               <a
@@ -192,13 +194,18 @@ export function GreetingCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Buka rute tujuan pengiriman di Google Maps"
-                className="group flex items-start justify-center gap-1.5 rounded-xl border border-primary/20 bg-white/90 p-2.5 text-left text-xs text-foreground/85 shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-white hover:text-primary hover:shadow-sm"
+                className="group flex items-start gap-2 rounded-xl border border-dashed border-primary/40 bg-white/95 p-3 text-left text-xs text-foreground/90 shadow-xs transition-all duration-150 hover:border-primary hover:bg-white hover:shadow-sm"
               >
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-transform group-hover:scale-110" />
-                <span className="flex-1 whitespace-normal break-words leading-snug">
-                  <strong className="font-semibold text-primary/90">Tujuan:</strong> {displayAddress}
-                </span>
-                <ExternalLink className="no-print mt-0.5 h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary transition-transform group-hover:scale-110" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Tujuan Pengiriman:
+                  </p>
+                  <p className="mt-0.5 whitespace-normal break-words leading-snug text-foreground">
+                    {displayAddress}
+                  </p>
+                </div>
+                <ExternalLink className="no-print mt-0.5 h-3.5 w-3.5 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
               </a>
             </div>
           )}
