@@ -48,6 +48,15 @@ const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
 
 const ALL_STATUSES = Array.from(new Set([...ORDER_STATUSES, "Dibatalkan"])) as OrderStatus[];
 
+function loadOrderOverrides(): Record<string, Partial<Order>> {
+  try {
+    const raw = localStorage.getItem("kalandra_order_overrides");
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 function buildInvoiceWaText(o: Order, storeName: string) {
   const itemLines = o.items
     .map((item, idx) => {
@@ -92,7 +101,7 @@ function Admin() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const { orders, settings, isAdmin, loaded } = useStore();
+  const { orders = [], settings, isAdmin, loaded } = useStore();
   const [denied, setDenied] = useState(false);
 
   useEffect(() => {
@@ -284,7 +293,7 @@ function downloadCSV(orders: Order[]) {
 }
 
 function Overview({ go }: { go: (v: View) => void }) {
-  const { orders } = useStore();
+  const { orders = [] } = useStore();
   const revenue = 48750000 + orders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
   const active = orders.filter((o) => o.status === "Sedang Dirangkai").length;
   const kpis = [
@@ -335,16 +344,25 @@ function Overview({ go }: { go: (v: View) => void }) {
 }
 
 function Orders() {
-  const { orders, setOrderStatus, settings, products, saveProduct } = useStore();
+  const { orders = [], setOrderStatus, settings, products = [], saveProduct } = useStore();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [city, setCity] = useState<string>("all");
   const [card, setCard] = useState<Order | null>(null);
   const [invoice, setInvoice] = useState<Order | null>(null);
   const [editOrder, setEditOrder] = useState<Order | null>(null);
-  const [, forceRefresh] = useState(0);
+  const [orderOverrides, setOrderOverrides] = useState<Record<string, Partial<Order>>>(loadOrderOverrides);
 
-  const list = orders.filter((o) =>
+  const hydratedOrders = useMemo(
+    () =>
+      orders.map((o) => {
+        const patch = orderOverrides[o.id];
+        return patch ? ({ ...o, ...patch } as Order) : o;
+      }),
+    [orders, orderOverrides]
+  );
+
+  const list = hydratedOrders.filter((o) =>
     (status === "all" || o.status === status) && (city === "all" || o.city === city) &&
     (o.customerName + o.id + (o.address || "")).toLowerCase().includes(q.toLowerCase()));
 
@@ -372,18 +390,25 @@ function Orders() {
     if (!editOrder.customerName.trim()) {
       return void toast.error("Nama pemesan wajib diisi");
     }
-    const target = orders.find((o) => o.id === editOrder.id);
-    if (target) {
-      target.customerName = editOrder.customerName.trim();
-      target.phone = editOrder.phone.trim() || "-";
-      target.city = editOrder.city;
-      target.address = editOrder.address.trim() || "-";
-      target.deliveryDate = editOrder.deliveryDate;
-      target.shipping = SHIPPING_FEE[editOrder.city] ?? target.shipping;
-      target.total = target.subtotal + target.shipping;
-      target.items = editOrder.items;
-    }
-    forceRefresh((n) => n + 1);
+
+    const updatedShipping = SHIPPING_FEE[editOrder.city] ?? editOrder.shipping;
+    const updatedTotal = editOrder.subtotal + updatedShipping;
+
+    const patch: Partial<Order> = {
+      customerName: editOrder.customerName.trim(),
+      phone: editOrder.phone.trim() || "-",
+      city: editOrder.city,
+      address: editOrder.address.trim() || "-",
+      deliveryDate: editOrder.deliveryDate,
+      shipping: updatedShipping,
+      total: updatedTotal,
+      items: editOrder.items,
+    };
+
+    const nextOverrides = { ...orderOverrides, [editOrder.id]: patch };
+    setOrderOverrides(nextOverrides);
+    localStorage.setItem("kalandra_order_overrides", JSON.stringify(nextOverrides));
+
     toast.success(`Perubahan pada ${editOrder.id} disimpan`);
     setEditOrder(null);
   };
@@ -799,7 +824,7 @@ function Orders() {
 const emptyProduct = (): Product => ({ id: "p" + Date.now(), name: "", category: CATEGORIES[0], price: 0, stock: 10, image: IMAGES.hero, description: "", active: true, tags: [], rating: 5, reviews: 0 });
 
 function Products() {
-  const { products, categories, addCategory, renameCategory, deleteCategory, saveProduct, deleteProduct } = useStore();
+  const { products = [], categories = [], addCategory, renameCategory, deleteCategory, saveProduct, deleteProduct } = useStore();
   const [categoryName, setCategoryName] = useState("");
   const [categoryEdit, setCategoryEdit] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -889,7 +914,7 @@ interface CustomerRecord {
 }
 
 function Customers() {
-  const { users, orders, settings } = useStore();
+  const { users = [], orders = [], settings } = useStore();
   const [q, setQ] = useState("");
   const [manualCustomers, setManualCustomers] = useState<CustomerRecord[]>(() => {
     try {
