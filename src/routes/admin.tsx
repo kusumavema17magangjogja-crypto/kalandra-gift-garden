@@ -478,23 +478,32 @@ function Orders() {
         </table>
       </div>
 
-      {/* MODAL PRATINJAU KARTU UCAPAN */}
+      {/* MODAL PRATINJAU KARTU UCAPAN DENGAN ALAMAT TUJUAN PENGIRIMAN */}
       <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
         <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">Kartu Ucapan · {card?.id}</DialogTitle></DialogHeader>
-          {card?.items.map((i) => (
-            <div key={i.key} className="space-y-2">
-              <p className="text-sm text-muted-foreground">{i.name} · Pita <b>{ribbonLabel(i.ribbon)}</b></p>
-              <GreetingCard
-                to={i.to}
-                recipientAddress={card.address && card.address !== "-" ? card.address : undefined}
-                from={i.from}
-                message={i.message}
-                ribbon={i.ribbon}
-                cardTemplate={i.cardTemplate}
-              />
-            </div>
-          ))}
+          {card?.items.map((i) => {
+            const itemExt = i as typeof i & { recipientAddress?: string; recipientCity?: string; recipientPhone?: string };
+            const resolvedAddr = itemExt.recipientAddress
+              ? `${itemExt.recipientAddress}${itemExt.recipientCity ? ` (${itemExt.recipientCity})` : ""}${itemExt.recipientPhone ? ` · HP: ${itemExt.recipientPhone}` : ""}`
+              : card.address && card.address !== "-"
+              ? card.address
+              : `Area Pengiriman ${card.city}`;
+
+            return (
+              <div key={i.key} className="space-y-2">
+                <p className="text-sm text-muted-foreground">{i.name} · Pita <b>{ribbonLabel(i.ribbon)}</b></p>
+                <GreetingCard
+                  to={i.to}
+                  recipientAddress={resolvedAddr}
+                  from={i.from}
+                  message={i.message}
+                  ribbon={i.ribbon}
+                  cardTemplate={i.cardTemplate}
+                />
+              </div>
+            );
+          })}
         </DialogContent>
       </Dialog>
 
