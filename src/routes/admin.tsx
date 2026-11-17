@@ -57,6 +57,15 @@ function loadOrderOverrides(): Record<string, Partial<Order>> {
   }
 }
 
+function loadDeletedOrderIds(): string[] {
+  try {
+    const raw = localStorage.getItem("kalandra_deleted_orders");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 function buildInvoiceWaText(o: Order, storeName: string) {
   const itemLines = o.items
     .map((item, idx) => {
@@ -114,7 +123,9 @@ function Admin() {
   if (!loaded) return null;
   if (!isAdmin) return <Navigate to="/" />;
 
-  const pendingOrders = orders.filter((o) => o.status === "Menunggu Pembayaran");
+  const deletedIds = loadDeletedOrderIds();
+  const activeOrders = orders.filter((o) => !deletedIds.includes(o.id));
+  const pendingOrders = activeOrders.filter((o) => o.status === "Menunggu Pembayaran");
   const unread = pendingOrders.length;
 
   const Nav = ({ compact }: { compact?: boolean }) => (
@@ -294,11 +305,13 @@ function downloadCSV(orders: Order[]) {
 
 function Overview({ go }: { go: (v: View) => void }) {
   const { orders = [] } = useStore();
-  const revenue = 48750000 + orders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
-  const active = orders.filter((o) => o.status === "Sedang Dirangkai").length;
+  const deletedIds = loadDeletedOrderIds();
+  const visibleOrders = orders.filter((o) => !deletedIds.includes(o.id));
+  const revenue = 48750000 + visibleOrders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
+  const active = visibleOrders.filter((o) => o.status === "Sedang Dirangkai").length;
   const kpis = [
     { label: "Total Pendapatan Bulan Ini", value: formatIDR(revenue), trend: 12.4 },
-    { label: "Total Pesanan Masuk", value: `${134 + orders.length} Pesanan`, trend: 8.1 },
+    { label: "Total Pesanan Masuk", value: `${134 + visibleOrders.length} Pesanan`, trend: 8.1 },
     { label: "Antrean Rangkaian Hari Ini", value: `${active + 6} Rangkaian Aktif`, trend: -3.2 },
     { label: "Kuota Slot Hari Raya", value: "85% Terisi", trend: 15.0, progress: 85 },
   ];
@@ -320,7 +333,7 @@ function Overview({ go }: { go: (v: View) => void }) {
         <Panel className="lg:col-span-2">
           <h2 className="font-serif text-xl text-primary">Aktivitas Terbaru</h2>
           <ul className="mt-4 divide-y">
-            {orders.slice(0, 5).map((o) => (
+            {visibleOrders.slice(0, 5).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <img src={o.items[0]?.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
@@ -335,7 +348,7 @@ function Overview({ go }: { go: (v: View) => void }) {
         <Panel className="space-y-3">
           <h2 className="font-serif text-xl text-primary">Aksi Cepat</h2>
           <Button className="w-full justify-start" onClick={() => go("products")}><Plus className="mr-2 h-4 w-4" />Tambah Produk Baru</Button>
-          <Button variant="outline" className="w-full justify-start" onClick={() => downloadCSV(orders)}><Download className="mr-2 h-4 w-4" />Download Laporan CSV</Button>
+          <Button variant="outline" className="w-full justify-start" onClick={() => downloadCSV(visibleOrders)}><Download className="mr-2 h-4 w-4" />Download Laporan CSV</Button>
           <Button variant="outline" className="w-full justify-start border-accent text-accent hover:bg-accent/10 hover:text-accent" onClick={() => go("orders")}><AlertTriangle className="mr-2 h-4 w-4" />Cek Pesanan Mendesak</Button>
         </Panel>
       </div>
@@ -351,15 +364,19 @@ function Orders() {
   const [card, setCard] = useState<Order | null>(null);
   const [invoice, setInvoice] = useState<Order | null>(null);
   const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [orderOverrides, setOrderOverrides] = useState<Record<string, Partial<Order>>>(loadOrderOverrides);
+  const [deletedIds, setDeletedIds] = useState<string[]>(loadDeletedOrderIds);
 
   const hydratedOrders = useMemo(
     () =>
-      orders.map((o) => {
-        const patch = orderOverrides[o.id];
-        return patch ? ({ ...o, ...patch } as Order) : o;
-      }),
-    [orders, orderOverrides]
+      orders
+        .filter((o) => !deletedIds.includes(o.id))
+        .map((o) => {
+          const patch = orderOverrides[o.id];
+          return patch ? ({ ...o, ...patch } as Order) : o;
+        }),
+    [orders, orderOverrides, deletedIds]
   );
 
   const list = hydratedOrders.filter((o) =>
@@ -383,6 +400,23 @@ function Orders() {
     }
 
     setOrderStatus(order.id, nextStatus);
+  };
+
+  const handleConfirmDeleteOrder = () => {
+    if (!deleteTarget) return;
+    if ((deleteTarget.status as string) !== "Dibatalkan") {
+      deleteTarget.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          saveProduct({ ...prod, stock: prod.stock + item.qty });
+        }
+      });
+    }
+    const nextDeleted = Array.from(new Set([...deletedIds, deleteTarget.id]));
+    setDeletedIds(nextDeleted);
+    localStorage.setItem("kalandra_deleted_orders", JSON.stringify(nextDeleted));
+    toast.success(`Pesanan ${deleteTarget.id} dihapus`);
+    setDeleteTarget(null);
   };
 
   const handleSaveEditedOrder = () => {
@@ -475,7 +509,7 @@ function Orders() {
           <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[1160px] text-sm">
+        <table className="w-full min-w-[1220px] text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
@@ -547,6 +581,15 @@ function Orders() {
                           <MessageCircle className="mr-1 h-3.5 w-3.5" />Kirim WA
                         </a>
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget(o)}
+                        title="Hapus Pesanan"
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />Hapus
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -556,6 +599,24 @@ function Orders() {
           </tbody>
         </table>
       </div>
+
+      {/* KONFIRMASI HAPUS PESANAN */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus pesanan {deleteTarget?.id}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pesanan milik <strong>{deleteTarget?.customerName}</strong> akan dihapus dari daftar pesanan dan stok produk akan dikembalikan otomatis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleConfirmDeleteOrder}>
+              Hapus Pesanan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* MODAL EDIT DATA PESANAN */}
       <Dialog open={!!editOrder} onOpenChange={(o) => !o && setEditOrder(null)}>
@@ -948,6 +1009,7 @@ function Customers() {
 
   const mergedCustomers = useMemo(() => {
     const map = new Map<string, CustomerRecord>();
+    const deletedIds = loadDeletedOrderIds();
 
     users
       .filter((u) => u.role === "customer")
@@ -963,26 +1025,28 @@ function Customers() {
         });
       });
 
-    orders.forEach((o) => {
-      const cleanPhone = (o.phone || "").replace(/\D/g, "");
-      const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
-      const key = !isGuestEmail
-        ? o.customerEmail.toLowerCase()
-        : cleanPhone
-        ? `phone:${cleanPhone}`
-        : `name:${o.customerName.trim().toLowerCase()}`;
+    orders
+      .filter((o) => !deletedIds.includes(o.id))
+      .forEach((o) => {
+        const cleanPhone = (o.phone || "").replace(/\D/g, "");
+        const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
+        const key = !isGuestEmail
+          ? o.customerEmail.toLowerCase()
+          : cleanPhone
+          ? `phone:${cleanPhone}`
+          : `name:${o.customerName.trim().toLowerCase()}`;
 
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          name: o.customerName,
-          email: isGuestEmail ? "-" : o.customerEmail,
-          phone: cleanPhone || "-",
-          city: o.city,
-          source: "Pesanan",
-        });
-      }
-    });
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            name: o.customerName,
+            email: isGuestEmail ? "-" : o.customerEmail,
+            phone: cleanPhone || "-",
+            city: o.city,
+            source: "Pesanan",
+          });
+        }
+      });
 
     manualCustomers.forEach((m) => {
       map.set(m.key, m);
@@ -993,6 +1057,7 @@ function Customers() {
         const patched = { ...c, ...(overrides[c.key] ?? {}) };
         const normPhone = patched.phone.replace(/\D/g, "");
         const mine = orders.filter((o) => {
+          if (deletedIds.includes(o.id)) return false;
           if ((o.status as string) === "Dibatalkan") return false;
           const oPhone = (o.phone || "").replace(/\D/g, "");
           const matchEmail = patched.email !== "-" && o.customerEmail.toLowerCase() === patched.email.toLowerCase();
