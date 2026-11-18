@@ -124,7 +124,10 @@ function Admin() {
   if (!isAdmin) return <Navigate to="/" />;
 
   const deletedIds = loadDeletedOrderIds();
-  const activeOrders = orders.filter((o) => !deletedIds.includes(o.id));
+  const orderOverrides = loadOrderOverrides();
+  const activeOrders = orders
+    .filter((o) => !deletedIds.includes(o.id))
+    .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
   const pendingOrders = activeOrders.filter((o) => o.status === "Menunggu Pembayaran");
   const unread = pendingOrders.length;
 
@@ -137,11 +140,11 @@ function Admin() {
           onClick={() => { setView(m.id); setMobile(false); }}
           title={m.label}
           className={cn(
-            "flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition",
+            "flex w-full items-center justify-start gap-3 rounded-xl px-3.5 py-2.5 text-left text-[13.5px] leading-snug transition",
             compact && "justify-center px-0",
             view === m.id
-              ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
+              ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-xs"
+              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           )}
         >
           <m.icon className="h-4 w-4 shrink-0" />
@@ -153,7 +156,7 @@ function Admin() {
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-64")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-[252px]")}>
         <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
           <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
           {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
@@ -170,7 +173,7 @@ function Admin() {
         </button>
       </aside>
       <Sheet open={mobile} onOpenChange={setMobile}>
-        <SheetContent side="left" className="w-64 border-0 bg-sidebar p-0 text-sidebar-foreground">
+        <SheetContent side="left" className="w-[252px] border-0 bg-sidebar p-0 text-sidebar-foreground">
           <div className="flex items-center gap-2.5 border-b border-sidebar-border p-4">
             <Gift className="h-6 w-6 text-sidebar-primary" />
             <span className="font-serif text-xl">{settings.storeName} Admin</span>
@@ -333,7 +336,10 @@ function downloadCSV(orders: Order[]) {
 function Overview({ go }: { go: (v: View) => void }) {
   const { orders = [] } = useStore();
   const deletedIds = loadDeletedOrderIds();
-  const visibleOrders = orders.filter((o) => !deletedIds.includes(o.id));
+  const orderOverrides = loadOrderOverrides();
+  const visibleOrders = orders
+    .filter((o) => !deletedIds.includes(o.id))
+    .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
   const revenue = 48750000 + visibleOrders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
   const active = visibleOrders.filter((o) => o.status === "Sedang Dirangkai").length;
   const kpis = [
@@ -556,7 +562,7 @@ function Orders() {
               const waInvoiceHref = waLink(o.phone, buildInvoiceWaText(o, settings.storeName));
               const isCancelled = (o.status as string) === "Dibatalkan";
               return (
-                <tr key={o.id} className={cn("border-b align-middle last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
+                <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
                   <td className="max-w-[120px] truncate px-3 py-3.5 font-semibold" title={o.id}>{o.id}</td>
                   <td className="px-3 py-3.5">
                     <p className="font-medium whitespace-nowrap">{o.customerName}</p>
@@ -594,51 +600,50 @@ function Orders() {
                       <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="px-3 py-3.5 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
+                  <td className="w-[180px] px-3 py-3.5">
+                    <div className="grid w-[168px] grid-cols-2 gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 px-2.5 text-xs"
+                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
                         onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}
                       >
-                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
+                        <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />Edit
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 px-2.5 text-xs"
+                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget(o)}
+                        title="Hapus Pesanan"
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5 shrink-0" />Hapus
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
                         onClick={() => setCard(o)}
                       >
-                        <Eye className="mr-1 h-3.5 w-3.5" />Kartu
+                        <Eye className="mr-1 h-3.5 w-3.5 shrink-0" />Kartu
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 px-2.5 text-xs"
+                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
                         onClick={() => setInvoice(o)}
                       >
-                        <Receipt className="mr-1 h-3.5 w-3.5" />Struk
+                        <Receipt className="mr-1 h-3.5 w-3.5 shrink-0" />Struk
                       </Button>
                       <Button
                         asChild
                         size="sm"
-                        className="h-8 bg-success px-2.5 text-xs text-success-foreground hover:bg-success/90"
+                        className="col-span-2 h-8 w-full justify-center rounded-full bg-success px-2.5 text-xs font-medium text-success-foreground hover:bg-success/90"
                         title="Kirim Struk / Invoice langsung ke WhatsApp"
                       >
                         <a href={waInvoiceHref} target="_blank" rel="noreferrer">
-                          <MessageCircle className="mr-1 h-3.5 w-3.5" />WA
+                          <MessageCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />Kirim WA
                         </a>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteTarget(o)}
-                        title="Hapus Pesanan"
-                        aria-label="Hapus Pesanan"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </td>
@@ -1074,6 +1079,11 @@ function Customers() {
   const mergedCustomers = useMemo(() => {
     const map = new Map<string, CustomerRecord>();
     const deletedIds = loadDeletedOrderIds();
+    const orderOverrides = loadOrderOverrides();
+
+    const activeOrders = orders
+      .filter((o) => !deletedIds.includes(o.id))
+      .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
 
     users
       .filter((u) => u.role === "customer")
@@ -1089,28 +1099,26 @@ function Customers() {
         });
       });
 
-    orders
-      .filter((o) => !deletedIds.includes(o.id))
-      .forEach((o) => {
-        const cleanPhone = (o.phone || "").replace(/\D/g, "");
-        const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
-        const key = !isGuestEmail
-          ? o.customerEmail.toLowerCase()
-          : cleanPhone
-          ? `phone:${cleanPhone}`
-          : `name:${o.customerName.trim().toLowerCase()}`;
+    activeOrders.forEach((o) => {
+      const cleanPhone = (o.phone || "").replace(/\D/g, "");
+      const isGuestEmail = !o.customerEmail || o.customerEmail === "guest@kalandra.id";
+      const key = !isGuestEmail
+        ? o.customerEmail.toLowerCase()
+        : cleanPhone
+        ? `phone:${cleanPhone}`
+        : `name:${o.customerName.trim().toLowerCase()}`;
 
-        if (!map.has(key)) {
-          map.set(key, {
-            key,
-            name: o.customerName,
-            email: isGuestEmail ? "-" : o.customerEmail,
-            phone: cleanPhone || "-",
-            city: o.city,
-            source: "Pesanan",
-          });
-        }
-      });
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          name: o.customerName,
+          email: isGuestEmail ? "-" : o.customerEmail,
+          phone: cleanPhone || "-",
+          city: o.city,
+          source: "Pesanan",
+        });
+      }
+    });
 
     manualCustomers.forEach((m) => {
       map.set(m.key, m);
@@ -1120,8 +1128,7 @@ function Customers() {
       .map((c) => {
         const patched = { ...c, ...(overrides[c.key] ?? {}) };
         const normPhone = patched.phone.replace(/\D/g, "");
-        const mine = orders.filter((o) => {
-          if (deletedIds.includes(o.id)) return false;
+        const mine = activeOrders.filter((o) => {
           if ((o.status as string) === "Dibatalkan") return false;
           const oPhone = (o.phone || "").replace(/\D/g, "");
           const matchEmail = patched.email !== "-" && o.customerEmail.toLowerCase() === patched.email.toLowerCase();
@@ -1238,15 +1245,15 @@ function Customers() {
                   <td className="px-3 py-3.5 text-xs whitespace-nowrap">{u.city}</td>
                   <td className="px-3 py-3.5 text-center">{u.count}</td>
                   <td className="px-3 py-3.5 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
-                  <td className="px-3 py-3.5 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => openEditDialog(u)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
+                  <td className="w-[164px] px-3 py-3.5 whitespace-nowrap">
+                    <div className="grid w-[152px] grid-cols-2 gap-1.5">
+                      <Button size="sm" variant="outline" className="h-8 w-full justify-center rounded-full px-2.5 text-xs font-medium" onClick={() => openEditDialog(u)}>
+                        <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />Edit
                       </Button>
                       {u.phone && u.phone !== "-" && (
-                        <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs text-success hover:text-success">
+                        <Button asChild size="sm" variant="outline" className="h-8 w-full justify-center rounded-full px-2.5 text-xs font-medium text-success hover:text-success">
                           <a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)} target="_blank" rel="noreferrer">
-                            <MessageCircle className="mr-1 h-3.5 w-3.5" />Chat
+                            <MessageCircle className="mr-1 h-3.5 w-3.5 shrink-0" />Chat
                           </a>
                         </Button>
                       )}
