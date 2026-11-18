@@ -41,7 +41,7 @@ type View = "overview" | "orders" | "products" | "customers" | "settings";
 const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Ringkasan", icon: BarChart3 },
   { id: "orders", label: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Kelola Katalog & Kategori", icon: Tag },
+  { id: "products", label: "Kelola Katalog", icon: Tag },
   { id: "customers", label: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
