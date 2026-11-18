@@ -41,7 +41,7 @@ type View = "overview" | "orders" | "products" | "customers" | "settings";
 const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Ringkasan", icon: BarChart3 },
   { id: "orders", label: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Katalog & Kategori", icon: Tag },
+  { id: "products", label: "Kelola Katalog & Kategori", icon: Tag },
   { id: "customers", label: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", icon: Settings },
 ];
@@ -129,21 +129,23 @@ function Admin() {
   const unread = pendingOrders.length;
 
   const Nav = ({ compact }: { compact?: boolean }) => (
-    <nav className="flex flex-col gap-1 p-3">
+    <nav className="flex flex-col gap-1.5 p-3">
       {MENU.map((m) => (
         <button
           key={m.id}
+          type="button"
           onClick={() => { setView(m.id); setMobile(false); }}
           title={m.label}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition",
+            "flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition",
+            compact && "justify-center px-0",
             view === m.id
               ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
               : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
           )}
         >
           <m.icon className="h-4 w-4 shrink-0" />
-          {!compact && <span className="truncate">{m.label}</span>}
+          {!compact && <span className="whitespace-nowrap">{m.label}</span>}
         </button>
       ))}
     </nav>
@@ -151,28 +153,36 @@ function Admin() {
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
-        <div className="flex items-center gap-2 border-b border-sidebar-border p-4">
-          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />{!collapsed && <span className="font-serif text-lg leading-tight">{settings.storeName} Admin</span>}
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-64")}>
+        <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
+          <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
+          {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
         </div>
         <Nav compact={collapsed} />
-        <button onClick={() => setCollapsed(!collapsed)} className="mt-auto flex items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70" aria-label="Ciutkan sidebar">
-          <ChevronLeft className={cn("h-4 w-4 transition", collapsed && "rotate-180")} />{!collapsed && "Ciutkan"}
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="mt-auto flex items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          aria-label="Ciutkan sidebar"
+        >
+          <ChevronLeft className={cn("h-4 w-4 transition", collapsed && "rotate-180")} />
+          {!collapsed && <span>Ciutkan</span>}
         </button>
       </aside>
       <Sheet open={mobile} onOpenChange={setMobile}>
         <SheetContent side="left" className="w-64 border-0 bg-sidebar p-0 text-sidebar-foreground">
-          <div className="flex items-center gap-2 border-b border-sidebar-border p-4"><Gift className="h-6 w-6 text-sidebar-primary" /><span className="font-serif text-xl">{settings.storeName} Admin</span></div>
+          <div className="flex items-center gap-2.5 border-b border-sidebar-border p-4">
+            <Gift className="h-6 w-6 text-sidebar-primary" />
+            <span className="font-serif text-xl">{settings.storeName} Admin</span>
+          </div>
           <Nav />
         </SheetContent>
       </Sheet>
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-6">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobile(true)} aria-label="Menu"><Menu /></Button>
-          <h1 className="font-serif text-2xl text-primary">
-            {view === "products" ? "Kelola Katalog & Kategori" : MENU.find((m) => m.id === view)?.label}
-          </h1>
-          <div className="ml-auto flex items-center gap-2">
+          <h1 className="font-serif text-2xl text-primary">{MENU.find((m) => m.id === view)?.label}</h1>
+          <div className="ml-auto flex items-center gap-3">
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi Pesanan Baru">
@@ -276,8 +286,13 @@ function Admin() {
               </PopoverContent>
             </Popover>
 
-            <div className="hidden items-center gap-2 sm:flex"><span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm text-primary-foreground">AK</span><span className="text-sm font-medium">Admin {settings.storeName}</span></div>
-            <Button asChild variant="outline" size="sm"><Link to="/"><Store className="mr-1 h-4 w-4" />Kembali ke Toko</Link></Button>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">AK</span>
+              <span className="text-sm font-medium">Admin {settings.storeName}</span>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/"><Store className="mr-1.5 h-4 w-4" />Kembali ke Toko</Link>
+            </Button>
           </div>
         </header>
         <main className="p-4 md:p-6">
@@ -513,19 +528,26 @@ function Orders() {
 
   return (
     <Panel>
-      <div className="flex flex-col gap-3 md:flex-row">
-        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari nama pelanggan, Order ID, atau alamat tujuan" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <Select value={status} onValueChange={setStatus}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-        <Select value={city} onValueChange={setCity}><SelectTrigger className="md:w-40"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-9" placeholder="Cari nama pelanggan, Order ID, atau alamat tujuan" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Semua Status</SelectItem>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={city} onValueChange={setCity}>
+          <SelectTrigger className="md:w-40"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Semua Kota</SelectItem>{CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+        </Select>
       </div>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
-                <th key={h} className="px-2 py-3 font-semibold">{h}</th>
+                <th key={h} className="whitespace-nowrap px-3 py-3 font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
@@ -534,19 +556,19 @@ function Orders() {
               const waInvoiceHref = waLink(o.phone, buildInvoiceWaText(o, settings.storeName));
               const isCancelled = (o.status as string) === "Dibatalkan";
               return (
-                <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
-                  <td className="max-w-[120px] truncate px-2 py-3 font-semibold" title={o.id}>{o.id}</td>
-                  <td className="px-2 py-3">
-                    <p className="font-medium">{o.customerName}</p>
+                <tr key={o.id} className={cn("border-b align-middle last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
+                  <td className="max-w-[120px] truncate px-3 py-3.5 font-semibold" title={o.id}>{o.id}</td>
+                  <td className="px-3 py-3.5">
+                    <p className="font-medium whitespace-nowrap">{o.customerName}</p>
                     {o.phone && o.phone !== "-" && (
                       <p className="text-xs text-muted-foreground">{o.phone}</p>
                     )}
                   </td>
-                  <td className="max-w-[150px] px-2 py-3">
+                  <td className="max-w-[160px] px-3 py-3.5">
                     <p className="line-clamp-2 text-xs">{o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
                   </td>
-                  <td className="max-w-[185px] px-2 py-3">
-                    <div className="flex items-start gap-1 text-xs">
+                  <td className="max-w-[190px] px-3 py-3.5">
+                    <div className="flex items-start gap-1.5 text-xs">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                       <div className="min-w-0">
                         <span className="font-semibold text-primary">{o.city}</span>
@@ -556,9 +578,9 @@ function Orders() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-3 text-xs whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
-                  <td className="px-2 py-3 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
-                  <td className="px-2 py-3">
+                  <td className="px-3 py-3.5 text-xs whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
+                  <td className="px-3 py-3.5 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
+                  <td className="px-3 py-3.5">
                     <Select value={o.status} onValueChange={(v) => handleStatusChange(o, v as OrderStatus)}>
                       <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none">
                         {isCancelled ? (
@@ -572,50 +594,51 @@ function Orders() {
                       <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="w-[168px] px-2 py-3">
-                    <div className="grid grid-cols-2 gap-1.5">
+                  <td className="px-3 py-3.5 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 w-full justify-center px-2 text-xs"
+                        className="h-8 px-2.5 text-xs"
                         onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}
                       >
-                        <Pencil className="mr-1 h-3 w-3 shrink-0" />Edit
+                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 w-full justify-center px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteTarget(o)}
-                        title="Hapus Pesanan"
-                      >
-                        <Trash2 className="mr-1 h-3 w-3 shrink-0" />Hapus
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 w-full justify-center px-2 text-xs"
+                        className="h-8 px-2.5 text-xs"
                         onClick={() => setCard(o)}
                       >
-                        <Eye className="mr-1 h-3 w-3 shrink-0" />Kartu
+                        <Eye className="mr-1 h-3.5 w-3.5" />Kartu
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 w-full justify-center px-2 text-xs"
+                        className="h-8 px-2.5 text-xs"
                         onClick={() => setInvoice(o)}
                       >
-                        <Receipt className="mr-1 h-3 w-3 shrink-0" />Struk
+                        <Receipt className="mr-1 h-3.5 w-3.5" />Struk
                       </Button>
                       <Button
                         asChild
                         size="sm"
-                        className="col-span-2 h-7 w-full justify-center bg-success px-2 text-xs text-success-foreground hover:bg-success/90"
+                        className="h-8 bg-success px-2.5 text-xs text-success-foreground hover:bg-success/90"
                         title="Kirim Struk / Invoice langsung ke WhatsApp"
                       >
                         <a href={waInvoiceHref} target="_blank" rel="noreferrer">
-                          <MessageCircle className="mr-1 h-3 w-3 shrink-0" />Kirim WA
+                          <MessageCircle className="mr-1 h-3.5 w-3.5" />WA
                         </a>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget(o)}
+                        title="Hapus Pesanan"
+                        aria-label="Hapus Pesanan"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </td>
@@ -929,7 +952,7 @@ function Products() {
 
   return (
     <Panel>
-      <div className="flex flex-col gap-3 md:flex-row">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari produk" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={cat} onValueChange={setCat}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
@@ -937,8 +960,22 @@ function Products() {
       </div>
       <div className="mt-5 space-y-3 border-y py-4">
         <h2 className="font-serif text-xl text-primary">Kategori</h2>
-        <div className="flex flex-wrap gap-2">{categories.map((c) => <div key={c} className="flex items-center gap-1 border px-2 py-1 text-sm"><span>{c}</span><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Ubah kategori ${c}`} onClick={() => { setCategoryEdit(c); setCategoryName(c); }}><Pencil className="h-3 w-3" /></Button><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Hapus kategori ${c}`} onClick={() => { const error = deleteCategory(c); if (error) toast.error(error); else toast.success("Kategori dihapus"); }}><Trash2 className="h-3 w-3" /></Button></div>)}</div>
-        <div className="flex gap-2"><Input aria-label="Nama kategori" placeholder="Nama kategori baru" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} /><Button onClick={() => { if (!categoryName.trim()) return; if (categoryEdit) renameCategory(categoryEdit, categoryName); else addCategory(categoryName); setCategoryName(""); setCategoryEdit(null); toast.success("Kategori disimpan"); }}>{categoryEdit ? "Simpan Kategori" : "Tambah Kategori"}</Button>{categoryEdit && <Button variant="outline" onClick={() => { setCategoryEdit(null); setCategoryName(""); }}>Batal</Button>}</div>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((c) => (
+            <div key={c} className="flex items-center gap-1 rounded-lg border bg-background px-2.5 py-1 text-sm">
+              <span>{c}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Ubah kategori ${c}`} onClick={() => { setCategoryEdit(c); setCategoryName(c); }}><Pencil className="h-3 w-3" /></Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`Hapus kategori ${c}`} onClick={() => { const error = deleteCategory(c); if (error) toast.error(error); else toast.success("Kategori dihapus"); }}><Trash2 className="h-3 w-3" /></Button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input aria-label="Nama kategori" placeholder="Nama kategori baru" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} />
+          <Button onClick={() => { if (!categoryName.trim()) return; if (categoryEdit) renameCategory(categoryEdit, categoryName); else addCategory(categoryName); setCategoryName(""); setCategoryEdit(null); toast.success("Kategori disimpan"); }}>
+            {categoryEdit ? "Simpan Kategori" : "Tambah Kategori"}
+          </Button>
+          {categoryEdit && <Button variant="outline" onClick={() => { setCategoryEdit(null); setCategoryName(""); }}>Batal</Button>}
+        </div>
       </div>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((p) => (
@@ -1181,7 +1218,7 @@ function Customers() {
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Nama", "Email", "WhatsApp", "Kota", "Pesanan", "Total Belanja", "Aksi"].map((h) => (
-                <th key={h} className="px-2 py-3 font-semibold">{h}</th>
+                <th key={h} className="whitespace-nowrap px-3 py-3 font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
@@ -1191,25 +1228,25 @@ function Customers() {
                 ? (u.phone.startsWith("62") ? `+${u.phone}` : u.phone)
                 : "-";
               return (
-                <tr key={u.key} className="border-b last:border-0 hover:bg-secondary/40">
-                  <td className="px-2 py-3">
-                    <p className="font-medium">{u.name}</p>
+                <tr key={u.key} className="border-b align-middle last:border-0 hover:bg-secondary/40">
+                  <td className="px-3 py-3.5">
+                    <p className="font-medium whitespace-nowrap">{u.name}</p>
                     <span className="text-[10px] text-muted-foreground">{u.source}</span>
                   </td>
-                  <td className="px-2 py-3 text-xs text-muted-foreground">{u.email}</td>
-                  <td className="px-2 py-3 text-xs">{formattedPhone}</td>
-                  <td className="px-2 py-3 text-xs">{u.city}</td>
-                  <td className="px-2 py-3 text-center">{u.count}</td>
-                  <td className="px-2 py-3 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
-                  <td className="w-[156px] px-2 py-3">
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <Button size="sm" variant="outline" className="h-7 w-full justify-center px-2 text-xs" onClick={() => openEditDialog(u)}>
-                        <Pencil className="mr-1 h-3 w-3 shrink-0" />Edit
+                  <td className="px-3 py-3.5 text-xs text-muted-foreground">{u.email}</td>
+                  <td className="px-3 py-3.5 text-xs whitespace-nowrap">{formattedPhone}</td>
+                  <td className="px-3 py-3.5 text-xs whitespace-nowrap">{u.city}</td>
+                  <td className="px-3 py-3.5 text-center">{u.count}</td>
+                  <td className="px-3 py-3.5 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
+                  <td className="px-3 py-3.5 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={() => openEditDialog(u)}>
+                        <Pencil className="mr-1 h-3.5 w-3.5" />Edit
                       </Button>
                       {u.phone && u.phone !== "-" && (
-                        <Button asChild size="sm" variant="outline" className="h-7 w-full justify-center px-2 text-xs text-success hover:text-success">
+                        <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs text-success hover:text-success">
                           <a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)} target="_blank" rel="noreferrer">
-                            <MessageCircle className="mr-1 h-3 w-3 shrink-0" />Chat
+                            <MessageCircle className="mr-1 h-3.5 w-3.5" />Chat
                           </a>
                         </Button>
                       )}
