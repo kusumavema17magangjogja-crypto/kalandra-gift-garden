@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3, Package, Tag, Users, Settings, Bell, Store, ChevronLeft, Menu, TrendingUp, TrendingDown,
-  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift, Receipt, Printer, MapPin, Send, Clock, CheckCircle2,
+  Plus, Download, AlertTriangle, Search, MessageCircle, Eye, Pencil, Trash2, Gift, Receipt, Printer, MapPin, Send, Clock, CheckCircle2, ImageDown, QrCode, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,15 +38,38 @@ export const Route = createFileRoute("/admin")({
 });
 
 type View = "overview" | "orders" | "products" | "customers" | "settings";
-const MENU: { id: View; label: string; icon: typeof BarChart3 }[] = [
-  { id: "overview", label: "Ringkasan", icon: BarChart3 },
-  { id: "orders", label: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Kelola Katalog & Kategori", icon: Tag },
-  { id: "customers", label: "Data Pelanggan", icon: Users },
-  { id: "settings", label: "Pengaturan Toko", icon: Settings },
+const MENU: { id: View; label: string; headerTitle: string; icon: typeof BarChart3 }[] = [
+  { id: "overview", label: "Ringkasan", headerTitle: "Ringkasan", icon: BarChart3 },
+  { id: "orders", label: "Kelola Pesanan", headerTitle: "Kelola Pesanan", icon: Package },
+  { id: "products", label: "Katalog & Kategori", headerTitle: "Kelola Katalog & Kategori", icon: Tag },
+  { id: "customers", label: "Data Pelanggan", headerTitle: "Data Pelanggan", icon: Users },
+  { id: "settings", label: "Pengaturan Toko", headerTitle: "Pengaturan Toko", icon: Settings },
 ];
 
 const ALL_STATUSES = Array.from(new Set([...ORDER_STATUSES, "Dibatalkan"])) as OrderStatus[];
+
+interface PaymentConfig {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  qrisUrl: string;
+}
+
+const DEFAULT_PAYMENT: PaymentConfig = {
+  bankName: "BCA",
+  accountNumber: "8610-4920-11",
+  accountHolder: "Kalandra Florist & Gift",
+  qrisUrl: "",
+};
+
+function loadPaymentConfig(): PaymentConfig {
+  try {
+    const raw = localStorage.getItem("kalandra_payment_config");
+    return raw ? { ...DEFAULT_PAYMENT, ...JSON.parse(raw) } : DEFAULT_PAYMENT;
+  } catch {
+    return DEFAULT_PAYMENT;
+  }
+}
 
 function loadOrderOverrides(): Record<string, Partial<Order>> {
   try {
@@ -66,7 +89,13 @@ function loadDeletedOrderIds(): string[] {
   }
 }
 
-function buildInvoiceWaText(o: Order, storeName: string) {
+function buildQrImageUrl(order: Order, storeName: string, pay: PaymentConfig) {
+  if (pay.qrisUrl.trim()) return pay.qrisUrl.trim();
+  const payload = `PEMBAYARAN ${storeName.toUpperCase()} | INV: ${order.id} | TOTAL: ${formatIDR(order.total)} | ${pay.bankName} ${pay.accountNumber} a.n ${pay.accountHolder}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=${encodeURIComponent(payload)}`;
+}
+
+function buildInvoiceWaText(o: Order, storeName: string, pay: PaymentConfig) {
   const itemLines = o.items
     .map((item, idx) => {
       const addonNames = item.addons
@@ -101,8 +130,188 @@ function buildInvoiceWaText(o: Order, storeName: string) {
     `Ongkos Kirim (${o.city}): ${formatIDR(o.shipping)}`,
     `*TOTAL TAGIHAN: ${formatIDR(o.total)}*`,
     ``,
+    `*Metode Pembayaran:*`,
+    `Transfer Bank *${pay.bankName}*: *${pay.accountNumber}*`,
+    `a.n. *${pay.accountHolder}*`,
+    `(Scan QRIS / Struk Gambar terlampir)`,
+    ``,
     `Terima kasih telah mempercayakan momen spesial Anda bersama ${storeName}!`,
   ].join("\n");
+}
+
+async function generateReceiptImageBlob(o: Order, storeName: string, storeTagline: string, waNumber: string, pay: PaymentConfig): Promise<Blob | null> {
+  const canvas = document.createElement("canvas");
+  const width = 640;
+  const lineHeight = 32;
+  const estimatedHeight = 860 + o.items.length * 46;
+  canvas.width = width;
+  canvas.height = estimatedHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  // Background kartu krem lembut
+  ctx.fillStyle = "#FAF7F2";
+  ctx.fillRect(0, 0, width, estimatedHeight);
+
+  // Bingkai utama putih
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#E2DCD2";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(24, 24, width - 48, estimatedHeight - 48, 24);
+  ctx.fill();
+  ctx.stroke();
+
+  // Header hijau tua elegan
+  ctx.fillStyle = "#1B3B2B";
+  ctx.beginPath();
+  ctx.roundRect(24, 24, width - 48, 128, [24, 24, 0, 0]);
+  ctx.fill();
+
+  ctx.fillStyle = "#F5EFE6";
+  ctx.font = "bold 30px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText(storeName, width / 2, 76);
+
+  ctx.fillStyle = "#D4C9B8";
+  ctx.font = "15px sans-serif";
+  ctx.fillText(storeTagline || "Florist & Bespoke Gift Studio", width / 2, 105);
+  ctx.fillText(`WhatsApp Official: +${waNumber}`, width / 2, 128);
+
+  let y = 188;
+  ctx.textAlign = "left";
+
+  const drawRow = (label: string, val: string, bold = false, color = "#1F2937") => {
+    ctx.fillStyle = "#6B7280";
+    ctx.font = "15px sans-serif";
+    ctx.fillText(label, 52, y);
+    ctx.fillStyle = color;
+    ctx.font = bold ? "bold 16px sans-serif" : "15px sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(val, width - 52, y);
+    ctx.textAlign = "left";
+    y += lineHeight;
+  };
+
+  drawRow("No. Invoice", o.id, true, "#1B3B2B");
+  drawRow("Tanggal Order", formatDate(o.createdAt));
+  drawRow("Jadwal Kirim", formatDate(o.deliveryDate), true);
+  drawRow("Status Pesanan", o.status, true, o.status === "Dibatalkan" ? "#DC2626" : "#15803D");
+
+  // Garis putus-putus
+  ctx.strokeStyle = "#D1D5DB";
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(52, y - 8);
+  ctx.lineTo(width - 52, y - 8);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  y += 18;
+
+  // Tujuan Pengiriman
+  ctx.fillStyle = "#1B3B2B";
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillText("TUJUAN PENGIRIMAN", 52, y);
+  y += 24;
+  ctx.fillStyle = "#111827";
+  ctx.font = "bold 16px sans-serif";
+  const recipient = o.items[0]?.to || o.customerName;
+  ctx.fillText(`${recipient} ${o.phone && o.phone !== "-" ? `(${o.phone})` : ""}`, 52, y);
+  y += 22;
+  ctx.fillStyle = "#4B5563";
+  ctx.font = "14px sans-serif";
+  const fullAddr = o.address && o.address !== "-" ? `${o.address} — ${o.city}` : o.city;
+  ctx.fillText(fullAddr.slice(0, 68), 52, y);
+  y += 28;
+
+  // Garis putus-putus
+  ctx.strokeStyle = "#D1D5DB";
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(52, y - 8);
+  ctx.lineTo(width - 52, y - 8);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  y += 18;
+
+  // Rincian Item
+  ctx.fillStyle = "#1B3B2B";
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillText("RINCIAN ITEM", 52, y);
+  y += 26;
+
+  o.items.forEach((item) => {
+    const rowTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+    ctx.fillStyle = "#111827";
+    ctx.font = "bold 15px sans-serif";
+    ctx.fillText(`${item.name} (${item.qty}x)`, 52, y);
+    ctx.textAlign = "right";
+    ctx.fillText(formatIDR(rowTotal), width - 52, y);
+    ctx.textAlign = "left";
+    y += 28;
+  });
+
+  y += 8;
+  drawRow("Subtotal", formatIDR(o.subtotal));
+  drawRow(`Ongkos Kirim (${o.city})`, formatIDR(o.shipping));
+
+  // Total Box
+  ctx.fillStyle = "#F0EDE6";
+  ctx.beginPath();
+  ctx.roundRect(48, y - 10, width - 96, 48, 12);
+  ctx.fill();
+  ctx.fillStyle = "#1B3B2B";
+  ctx.font = "bold 18px sans-serif";
+  ctx.fillText("TOTAL PEMBAYARAN", 64, y + 20);
+  ctx.textAlign = "right";
+  ctx.font = "bold 20px sans-serif";
+  ctx.fillText(formatIDR(o.total), width - 64, y + 21);
+  ctx.textAlign = "left";
+  y += 62;
+
+  // Kotak Info Pembayaran & QR Code
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#1B3B2B";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(48, y, width - 96, 175, 16);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#1B3B2B";
+  ctx.font = "bold 14px sans-serif";
+  ctx.fillText("PEMBAYARAN TRANSFER & QRIS", 68, y + 30);
+
+  ctx.fillStyle = "#374151";
+  ctx.font = "15px sans-serif";
+  ctx.fillText(`Bank ${pay.bankName}`, 68, y + 62);
+  ctx.fillStyle = "#111827";
+  ctx.font = "bold 20px monospace";
+  ctx.fillText(pay.accountNumber, 68, y + 90);
+  ctx.fillStyle = "#4B5563";
+  ctx.font = "14px sans-serif";
+  ctx.fillText(`a.n. ${pay.accountHolder}`, 68, y + 116);
+  ctx.fillStyle = "#15803D";
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillText("Scan QR di samping untuk bayar instan →", 68, y + 148);
+
+  // Gambar QR Code
+  try {
+    const qrImg = new Image();
+    qrImg.crossOrigin = "anonymous";
+    qrImg.src = buildQrImageUrl(o, storeName, pay);
+    await new Promise<void>((resolve) => {
+      qrImg.onload = () => resolve();
+      qrImg.onerror = () => resolve();
+    });
+    if (qrImg.complete && qrImg.naturalWidth > 0) {
+      ctx.drawImage(qrImg, width - 208, y + 16, 140, 140);
+    }
+  } catch {
+    // Abaikan jika offline
+  }
+
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
 
 function Admin() {
@@ -138,17 +347,17 @@ function Admin() {
           key={m.id}
           type="button"
           onClick={() => { setView(m.id); setMobile(false); }}
-          title={m.label}
+          title={m.headerTitle}
           className={cn(
-            "flex w-full items-center justify-start gap-3 rounded-xl px-3.5 py-2.5 text-left text-[13.5px] leading-snug transition",
-            compact && "justify-center px-0",
+            "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition",
+            compact ? "justify-center px-0" : "justify-start",
             view === m.id
               ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-xs"
               : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           )}
         >
           <m.icon className="h-4 w-4 shrink-0" />
-          {!compact && <span className="whitespace-nowrap">{m.label}</span>}
+          {!compact && <span className="truncate">{m.label}</span>}
         </button>
       ))}
     </nav>
@@ -156,7 +365,7 @@ function Admin() {
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-[252px]")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
         <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
           <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
           {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
@@ -173,7 +382,7 @@ function Admin() {
         </button>
       </aside>
       <Sheet open={mobile} onOpenChange={setMobile}>
-        <SheetContent side="left" className="w-[252px] border-0 bg-sidebar p-0 text-sidebar-foreground">
+        <SheetContent side="left" className="w-64 border-0 bg-sidebar p-0 text-sidebar-foreground">
           <div className="flex items-center gap-2.5 border-b border-sidebar-border p-4">
             <Gift className="h-6 w-6 text-sidebar-primary" />
             <span className="font-serif text-xl">{settings.storeName} Admin</span>
@@ -184,7 +393,7 @@ function Admin() {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-6">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobile(true)} aria-label="Menu"><Menu /></Button>
-          <h1 className="font-serif text-2xl text-primary">{MENU.find((m) => m.id === view)?.label}</h1>
+          <h1 className="font-serif text-2xl text-primary">{MENU.find((m) => m.id === view)?.headerTitle}</h1>
           <div className="ml-auto flex items-center gap-3">
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
@@ -400,6 +609,8 @@ function Orders() {
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [orderOverrides, setOrderOverrides] = useState<Record<string, Partial<Order>>>(loadOrderOverrides);
   const [deletedIds, setDeletedIds] = useState<string[]>(loadDeletedOrderIds);
+  const [renderingImg, setRenderingImg] = useState(false);
+  const paymentConfig = useMemo(() => loadPaymentConfig(), []);
 
   const hydratedOrders = useMemo(
     () =>
@@ -480,10 +691,49 @@ function Orders() {
     setEditOrder(null);
   };
 
+  const handleDownloadAndSendReceiptImage = async (o: Order, openWaAfter = false) => {
+    setRenderingImg(true);
+    try {
+      const blob = await generateReceiptImageBlob(
+        o,
+        settings.storeName,
+        settings.storeTagline,
+        settings.whatsappNumber,
+        paymentConfig
+      );
+      if (blob) {
+        // Salin gambar ke clipboard supaya tinggal Ctrl+V di WhatsApp Web
+        try {
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          }
+        } catch {
+          // Fallback ke download otomatis
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Struk-${o.id}.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        toast.success("Gambar struk & QR berhasil diunduh & disalin! Tinggal tempel (Ctrl+V) di chat WA.");
+      }
+
+      if (openWaAfter) {
+        const waUrl = waLink(o.phone, buildInvoiceWaText(o, settings.storeName, paymentConfig));
+        window.open(waUrl, "_blank", "noreferrer");
+      }
+    } finally {
+      setRenderingImg(false);
+    }
+  };
+
   const handlePrintInvoice = () => {
     const el = document.getElementById("printable-invoice");
     if (!el) return void window.print();
-    const win = window.open("", "_blank", "width=480,height=760");
+    const win = window.open("", "_blank", "width=480,height=820");
     if (!win) return void window.print();
 
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
@@ -559,7 +809,6 @@ function Orders() {
           </thead>
           <tbody>
             {list.map((o) => {
-              const waInvoiceHref = waLink(o.phone, buildInvoiceWaText(o, settings.storeName));
               const isCancelled = (o.status as string) === "Dibatalkan";
               return (
                 <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
@@ -600,51 +849,51 @@ function Orders() {
                       <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="w-[180px] px-3 py-3.5">
-                    <div className="grid w-[168px] grid-cols-2 gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
+                  <td className="w-[184px] px-3 py-3.5">
+                    <div className="grid w-[172px] grid-cols-[1fr_1fr] gap-1.5">
+                      <button
+                        type="button"
                         onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}
+                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
                       >
-                        <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        <Pencil className="h-3.5 w-3.5 shrink-0" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setDeleteTarget(o)}
                         title="Hapus Pesanan"
+                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium text-destructive transition hover:bg-destructive/10"
                       >
-                        <Trash2 className="mr-1 h-3.5 w-3.5 shrink-0" />Hapus
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
+                        <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                        <span>Hapus</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setCard(o)}
+                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
                       >
-                        <Eye className="mr-1 h-3.5 w-3.5 shrink-0" />Kartu
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-full justify-center rounded-full px-2 text-xs font-medium"
+                        <Eye className="h-3.5 w-3.5 shrink-0" />
+                        <span>Kartu</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setInvoice(o)}
+                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
                       >
-                        <Receipt className="mr-1 h-3.5 w-3.5 shrink-0" />Struk
-                      </Button>
-                      <Button
-                        asChild
-                        size="sm"
-                        className="col-span-2 h-8 w-full justify-center rounded-full bg-success px-2.5 text-xs font-medium text-success-foreground hover:bg-success/90"
-                        title="Kirim Struk / Invoice langsung ke WhatsApp"
+                        <Receipt className="h-3.5 w-3.5 shrink-0" />
+                        <span>Struk</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={renderingImg}
+                        onClick={() => handleDownloadAndSendReceiptImage(o, true)}
+                        title="Unduh Gambar Struk & QR lalu buka WhatsApp"
+                        className="col-span-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-success px-2.5 text-xs font-medium text-success-foreground transition hover:bg-success/90 disabled:opacity-60"
                       >
-                        <a href={waInvoiceHref} target="_blank" rel="noreferrer">
-                          <MessageCircle className="mr-1.5 h-3.5 w-3.5 shrink-0" />Kirim WA
-                        </a>
-                      </Button>
+                        <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                        <span>Kirim Struk WA</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -826,11 +1075,11 @@ function Orders() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL STRUK / INVOICE & KIRIM KE WA */}
+      {/* MODAL STRUK / INVOICE + QRIS + NOMOR REKENING TOKO */}
       <Dialog open={!!invoice} onOpenChange={(o) => !o && setInvoice(null)}>
         <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-2xl text-primary">Struk Invoice</DialogTitle>
+            <DialogTitle className="font-serif text-2xl text-primary">Struk Invoice & Pembayaran</DialogTitle>
           </DialogHeader>
 
           {invoice && (
@@ -893,7 +1142,7 @@ function Orders() {
                   })}
                 </div>
 
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 border-b border-dashed pb-3 text-xs">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
                     <span>{formatIDR(invoice.subtotal)}</span>
@@ -908,25 +1157,54 @@ function Orders() {
                   </div>
                 </div>
 
-                <p className="pt-2 text-center text-[11px] italic text-muted-foreground">
+                {/* BLOK PEMBAYARAN REKENING & QRIS */}
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-secondary/40 p-3">
+                  <div className="space-y-1 text-xs">
+                    <p className="flex items-center gap-1 font-semibold uppercase tracking-wider text-primary">
+                      <CreditCard className="h-3.5 w-3.5" /> Info Pembayaran
+                    </p>
+                    <p className="text-muted-foreground">Bank <strong className="text-foreground">{paymentConfig.bankName}</strong></p>
+                    <p className="font-mono text-sm font-bold tracking-wide text-primary">{paymentConfig.accountNumber}</p>
+                    <p className="text-[11px] text-muted-foreground">a.n. {paymentConfig.accountHolder}</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <img
+                      src={buildQrImageUrl(invoice, settings.storeName, paymentConfig)}
+                      alt="QR Pembayaran"
+                      className="h-20 w-20 rounded-lg border bg-white p-1 object-contain"
+                    />
+                    <span className="flex items-center gap-0.5 text-[10px] font-medium text-muted-foreground">
+                      <QrCode className="h-2.5 w-2.5" /> Scan QR
+                    </span>
+                  </div>
+                </div>
+
+                <p className="pt-1 text-center text-[11px] italic text-muted-foreground">
                   Terima kasih telah berbelanja di {settings.storeName}.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" className="w-full" onClick={handlePrintInvoice}>
                   <Printer className="mr-1.5 h-4 w-4" />
-                  Cetak Struk / PDF
+                  Cetak PDF
                 </Button>
-                <Button asChild className="w-full bg-success text-success-foreground hover:bg-success/90">
-                  <a
-                    href={waLink(invoice.phone, buildInvoiceWaText(invoice, settings.storeName))}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Send className="mr-1.5 h-4 w-4" />
-                    Kirim ke WA
-                  </a>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={renderingImg}
+                  onClick={() => handleDownloadAndSendReceiptImage(invoice, false)}
+                >
+                  <ImageDown className="mr-1.5 h-4 w-4" />
+                  Simpan Gambar
+                </Button>
+                <Button
+                  className="col-span-2 w-full bg-success text-success-foreground hover:bg-success/90"
+                  disabled={renderingImg}
+                  onClick={() => handleDownloadAndSendReceiptImage(invoice, true)}
+                >
+                  <Send className="mr-1.5 h-4 w-4" />
+                  Unduh Gambar Struk & Buka WA
                 </Button>
               </div>
             </div>
@@ -1245,17 +1523,26 @@ function Customers() {
                   <td className="px-3 py-3.5 text-xs whitespace-nowrap">{u.city}</td>
                   <td className="px-3 py-3.5 text-center">{u.count}</td>
                   <td className="px-3 py-3.5 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
-                  <td className="w-[164px] px-3 py-3.5 whitespace-nowrap">
-                    <div className="grid w-[152px] grid-cols-2 gap-1.5">
-                      <Button size="sm" variant="outline" className="h-8 w-full justify-center rounded-full px-2.5 text-xs font-medium" onClick={() => openEditDialog(u)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />Edit
-                      </Button>
+                  <td className="w-[168px] px-3 py-3.5 whitespace-nowrap">
+                    <div className="grid w-[156px] grid-cols-[1fr_1fr] gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEditDialog(u)}
+                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Pencil className="h-3.5 w-3.5 shrink-0" />
+                        <span>Edit</span>
+                      </button>
                       {u.phone && u.phone !== "-" && (
-                        <Button asChild size="sm" variant="outline" className="h-8 w-full justify-center rounded-full px-2.5 text-xs font-medium text-success hover:text-success">
-                          <a href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)} target="_blank" rel="noreferrer">
-                            <MessageCircle className="mr-1 h-3.5 w-3.5 shrink-0" />Chat
-                          </a>
-                        </Button>
+                        <a
+                          href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium text-success transition hover:bg-success/10"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                          <span>Chat</span>
+                        </a>
                       )}
                     </div>
                   </td>
@@ -1334,12 +1621,15 @@ function Customers() {
 function SettingsView() {
   const { settings, updateSettings, resetDemo } = useStore();
   const [draft, setDraft] = useState(settings);
+  const [payment, setPayment] = useState<PaymentConfig>(loadPaymentConfig);
+
   const fields = [
     ["storeName", "Nama Toko"], ["storeTagline", "Tagline"], ["whatsappNumber", "Nomor WhatsApp (format 628xxx)"],
     ["instagramUrl", "Link Instagram"], ["tiktokUrl", "Link TikTok"], ["heroHeadline", "Judul Hero Banner"],
     ["heroSubheadline", "Subtitle Hero Banner"], ["heroImage", "URL Gambar Hero Banner"],
     ["footerDescription", "Deskripsi Footer"], ["operatingHours", "Jam Operasional"],
   ] as const;
+
   const save = () => {
     const number = draft.whatsappNumber.replace(/\D/g, "");
     if (!/^628\d{7,12}$/.test(number)) return void toast.error("Gunakan nomor WhatsApp dengan format 628xxx");
@@ -1350,31 +1640,60 @@ function SettingsView() {
       catch { return void toast.error("Gunakan URL lengkap http:// atau https://"); }
     }
     updateSettings({ ...draft, whatsappNumber: number, storeOpen: settings.storeOpen, citySlots: settings.citySlots });
-    toast.success("Pengaturan toko disimpan");
+    localStorage.setItem("kalandra_payment_config", JSON.stringify(payment));
+    toast.success("Pengaturan toko & rekening pembayaran disimpan");
   };
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Panel className="space-y-4">
         <h2 className="font-serif text-xl text-primary">Identitas & Kontak Toko</h2>
         {fields.map(([key, label]) => <div key={key} className="space-y-1.5"><Label htmlFor={key}>{label}</Label>{key === "heroSubheadline" || key === "footerDescription" ? <Textarea id={key} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} /> : <Input id={key} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} />}</div>)}
-        <Button onClick={save}>Simpan Pengaturan</Button>
+        <Button onClick={save}>Simpan Semua Pengaturan</Button>
         <label className="flex items-center justify-between rounded-lg border p-4">
           <span><span className="block font-medium">Status PO Hari Raya</span><span className="text-sm text-muted-foreground">{settings.storeOpen ? "Buka — pelanggan bisa checkout" : "Tutup — banner tampil di toko"}</span></span>
           <Switch checked={settings.storeOpen} onCheckedChange={(c) => updateSettings({ storeOpen: c })} />
         </label>
         <Button variant="outline" onClick={() => { resetDemo(); toast.success("Data demo direset"); }}>Reset Data Demo</Button>
       </Panel>
-      <Panel>
-        <h2 className="font-serif text-xl text-primary">Slot Pengiriman per Kota (harian)</h2>
-        <div className="mt-4 space-y-3">
-          {CITIES.map((c) => (
-            <div key={c} className="flex items-center justify-between gap-3">
-              <span className="text-sm">{c}</span>
-              <Input type="number" className="w-24" value={settings.citySlots[c] ?? 0} onChange={(e) => updateSettings({ citySlots: { ...settings.citySlots, [c]: +e.target.value } })} />
+
+      <div className="space-y-6">
+        <Panel className="space-y-4">
+          <h2 className="font-serif text-xl text-primary">Rekening & QRIS Pembayaran (Struk)</h2>
+          <p className="text-xs text-muted-foreground">Data ini otomatis tampil di struk cetak, struk gambar PNG, dan pesan WhatsApp tagihan.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-bank">Nama Bank</Label>
+              <Input id="pay-bank" placeholder="BCA / Mandiri / BRI" value={payment.bankName} onChange={(e) => setPayment({ ...payment, bankName: e.target.value })} />
             </div>
-          ))}
-        </div>
-      </Panel>
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-acc">Nomor Rekening</Label>
+              <Input id="pay-acc" placeholder="8610-4920-11" value={payment.accountNumber} onChange={(e) => setPayment({ ...payment, accountNumber: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pay-holder">Atas Nama Rekening</Label>
+            <Input id="pay-holder" placeholder="Kalandra Florist & Gift" value={payment.accountHolder} onChange={(e) => setPayment({ ...payment, accountHolder: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pay-qris">URL Gambar QRIS Toko (Opsional)</Label>
+            <Input id="pay-qris" placeholder="Kosongkan untuk generate QR otomatis sesuai total invoice" value={payment.qrisUrl} onChange={(e) => setPayment({ ...payment, qrisUrl: e.target.value })} />
+          </div>
+          <Button onClick={save} className="w-full">Simpan Rekening & QRIS</Button>
+        </Panel>
+
+        <Panel>
+          <h2 className="font-serif text-xl text-primary">Slot Pengiriman per Kota (harian)</h2>
+          <div className="mt-4 space-y-3">
+            {CITIES.map((c) => (
+              <div key={c} className="flex items-center justify-between gap-3">
+                <span className="text-sm">{c}</span>
+                <Input type="number" className="w-24" value={settings.citySlots[c] ?? 0} onChange={(e) => updateSettings({ citySlots: { ...settings.citySlots, [c]: +e.target.value } })} />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
