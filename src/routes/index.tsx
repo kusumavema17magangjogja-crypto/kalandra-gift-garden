@@ -11,12 +11,17 @@ import { useStore } from "@/lib/store";
 import {
   CITIES,
   SHIPPING_FEE,
-  formatIDR,
   isHalalProduct,
   type Product,
   type ProductTag,
 } from "@/lib/data";
-import { BUDGETS, COMMERCIAL_CATEGORIES, matchProductCategory, matchesOccasion } from "@/data/floristData";
+import {
+  BUDGETS,
+  COMMERCIAL_CATEGORIES,
+  formatIDR,
+  matchProductCategory,
+  matchesOccasion,
+} from "@/data/floristData";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -25,7 +30,8 @@ export const Route = createFileRoute("/")({
       { title: "Kalandra Florist & Gift — Bunga, Parsel & Seserahan" },
       {
         name: "description",
-        content: "Toko karangan bunga papan, hand bouquet, parsel buah, hampers, dan seserahan dengan kartu ucapan personal.",
+        content:
+          "Toko karangan bunga papan, hand bouquet, parsel buah, hampers, dan seserahan dengan kartu ucapan personal.",
       },
       { property: "og:title", content: "Kalandra Florist & Gift" },
       {
@@ -79,10 +85,13 @@ function Storefront() {
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "rating">("featured");
   const [pickedProduct, setPickedProduct] = useState<Product | null>(null);
 
+  const safeProducts = useMemo(() => products ?? [], [products]);
+  const safeCategories = useMemo(() => categories ?? [], [categories]);
+
   useEffect(() => {
     const onCustomize = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      const found = products.find((p) => p.id === id && p.active);
+      const found = safeProducts.find((p) => p.id === id && p.active);
       if (found) setPickedProduct(found);
     };
     const onCategory = (e: Event) => {
@@ -98,18 +107,20 @@ function Storefront() {
       window.removeEventListener("kalandra:customize", onCustomize);
       window.removeEventListener("kalandra:category", onCategory);
     };
-  }, [products]);
+  }, [safeProducts]);
 
   const allCategories = useMemo(() => {
     const merged = [
       ...COMMERCIAL_CATEGORIES,
-      ...categories.filter((c) => !COMMERCIAL_CATEGORIES.includes(c as (typeof COMMERCIAL_CATEGORIES)[number])),
+      ...safeCategories.filter(
+        (c) => !COMMERCIAL_CATEGORIES.includes(c as (typeof COMMERCIAL_CATEGORIES)[number]),
+      ),
     ];
     return Array.from(new Set(merged));
-  }, [categories]);
+  }, [safeCategories]);
 
   const filteredProducts = useMemo(() => {
-    const activeOnly = products.filter((p) => p.active);
+    const activeOnly = safeProducts.filter((p) => p.active);
     const budgetRange = BUDGETS.find((b) => b.id === budget);
 
     const list = activeOnly.filter((p) => {
@@ -124,14 +135,18 @@ function Storefront() {
     if (sortBy === "price-desc") return [...list].sort((a, b) => b.price - a.price);
     if (sortBy === "rating") return [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [products, selectedCategory, selectedTag, occasion, budget, sortBy]);
+  }, [safeProducts, selectedCategory, selectedTag, occasion, budget, sortBy]);
 
   const seserahanProducts = useMemo(
     () =>
-      products
-        .filter((p) => p.active && (matchesOccasion(p, "wedding") || p.category.toLowerCase().includes("seserahan")))
+      safeProducts
+        .filter(
+          (p) =>
+            p.active &&
+            (matchesOccasion(p, "wedding") || p.category.toLowerCase().includes("seserahan")),
+        )
         .slice(0, 4),
-    [products],
+    [safeProducts],
   );
 
   const resetFilters = () => {
@@ -142,7 +157,8 @@ function Storefront() {
     setSortBy("featured");
   };
 
-  const hasActiveFilter = selectedCategory !== "all" || selectedTag !== "all" || !!occasion || !!budget;
+  const hasActiveFilter =
+    selectedCategory !== "all" || selectedTag !== "all" || !!occasion || !!budget;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -263,7 +279,12 @@ function Storefront() {
               </SelectContent>
             </Select>
             {hasActiveFilter && (
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 gap-1.5 text-xs text-accent">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="h-9 gap-1.5 text-xs text-accent"
+              >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Reset Filter
               </Button>
@@ -389,7 +410,11 @@ function Storefront() {
                       disabled={!p.stock || !settings.storeOpen}
                       onClick={() => setPickedProduct(p)}
                     >
-                      {!settings.storeOpen ? "PO Ditutup" : p.stock > 0 ? "Custom & Pesan" : "Stok Habis"}
+                      {!settings.storeOpen
+                        ? "PO Ditutup"
+                        : p.stock > 0
+                          ? "Custom & Pesan"
+                          : "Stok Habis"}
                     </Button>
                   ) : (
                     <p className="mt-3 text-center text-xs text-muted-foreground">Mode Admin Aktif</p>
@@ -425,18 +450,32 @@ function Storefront() {
 
           <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {seserahanProducts.map((p) => (
-              <article key={p.id} className="flex flex-col justify-between overflow-hidden rounded-2xl border bg-card shadow-soft">
+              <article
+                key={p.id}
+                className="flex flex-col justify-between overflow-hidden rounded-2xl border bg-card shadow-soft"
+              >
                 <div>
-                  <img src={p.image} alt={p.name} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    loading="lazy"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
                   <div className="p-4">
-                    <h3 className="font-serif text-xl font-semibold text-primary line-clamp-1">{p.name}</h3>
+                    <h3 className="font-serif text-xl font-semibold text-primary line-clamp-1">
+                      {p.name}
+                    </h3>
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{p.description}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <span className="text-sm font-bold text-primary">{formatIDR(p.price)}</span>
                   {!isAdmin && (
-                    <Button size="sm" disabled={!p.stock || !settings.storeOpen} onClick={() => setPickedProduct(p)}>
+                    <Button
+                      size="sm"
+                      disabled={!p.stock || !settings.storeOpen}
+                      onClick={() => setPickedProduct(p)}
+                    >
                       Pesan
                     </Button>
                   )}
@@ -453,9 +492,12 @@ function Storefront() {
         <h2 className="mt-1 font-serif text-4xl text-primary">Galeri Bukti Jadi & Pengiriman</h2>
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {GALLERY_ITEMS.map((item, idx) => {
-            const sampleProduct = products[idx % Math.max(1, products.length)];
+            const sampleProduct = safeProducts[idx % Math.max(1, safeProducts.length)];
             return (
-              <article key={item.title} className="overflow-hidden rounded-2xl border bg-card shadow-soft">
+              <article
+                key={item.title}
+                className="overflow-hidden rounded-2xl border bg-card shadow-soft"
+              >
                 {sampleProduct && (
                   <img
                     src={sampleProduct.image}
