@@ -41,7 +41,7 @@ type View = "overview" | "orders" | "products" | "customers" | "settings";
 const MENU: { id: View; label: string; headerTitle: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Ringkasan", headerTitle: "Ringkasan", icon: BarChart3 },
   { id: "orders", label: "Kelola Pesanan", headerTitle: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Katalog & Kategori", headerTitle: "Kelola Katalog & Kategori", icon: Tag },
+  { id: "products", label: "Kelola Katalog & Kategori", headerTitle: "Kelola Katalog & Kategori", icon: Tag },
   { id: "customers", label: "Data Pelanggan", headerTitle: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", headerTitle: "Pengaturan Toko", icon: Settings },
 ];
@@ -353,7 +353,7 @@ function Admin() {
           )}
         >
           <m.icon className="h-4 w-4 shrink-0" />
-          {!compact && <span className="truncate whitespace-nowrap">{m.label}</span>}
+          {!compact && <span className="whitespace-nowrap">{m.label}</span>}
         </button>
       ))}
     </nav>
@@ -361,7 +361,7 @@ function Admin() {
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-64")}>
         <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
           <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
           {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
@@ -798,7 +798,15 @@ function Orders() {
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Order ID", "Pelanggan", "Produk", "Alamat Tujuan", "Tgl Kirim", "Total", "Status", "Aksi"].map((h) => (
-                <th key={h} className="whitespace-nowrap px-3 py-3 font-semibold">{h}</th>
+                <th
+                  key={h}
+                  className={cn(
+                    "whitespace-nowrap px-3 py-3 font-semibold",
+                    h === "Aksi" && "w-[196px]"
+                  )}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -844,12 +852,12 @@ function Orders() {
                       <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="w-[184px] px-3 py-3.5">
-                    <div className="grid w-[172px] grid-cols-[1fr_1fr] gap-1.5">
+                  <td className="w-[196px] px-3 py-3.5">
+                    <div className="grid w-full grid-cols-2 gap-1.5">
                       <button
                         type="button"
                         onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}
-                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
+                        className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium whitespace-nowrap transition hover:bg-accent hover:text-accent-foreground"
                       >
                         <Pencil className="h-3.5 w-3.5 shrink-0" />
                         <span>Edit</span>
@@ -858,7 +866,7 @@ function Orders() {
                         type="button"
                         onClick={() => setDeleteTarget(o)}
                         title="Hapus Pesanan"
-                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium text-destructive transition hover:bg-destructive/10"
+                        className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium text-destructive whitespace-nowrap transition hover:bg-destructive/10"
                       >
                         <Trash2 className="h-3.5 w-3.5 shrink-0" />
                         <span>Hapus</span>
@@ -866,7 +874,7 @@ function Orders() {
                       <button
                         type="button"
                         onClick={() => setCard(o)}
-                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
+                        className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium whitespace-nowrap transition hover:bg-accent hover:text-accent-foreground"
                       >
                         <Eye className="h-3.5 w-3.5 shrink-0" />
                         <span>Kartu</span>
@@ -874,7 +882,7 @@ function Orders() {
                       <button
                         type="button"
                         onClick={() => setInvoice(o)}
-                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
+                        className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium whitespace-nowrap transition hover:bg-accent hover:text-accent-foreground"
                       >
                         <Receipt className="h-3.5 w-3.5 shrink-0" />
                         <span>Struk</span>
@@ -884,7 +892,7 @@ function Orders() {
                         disabled={renderingImg}
                         onClick={() => handleDownloadAndSendReceiptImage(o, true)}
                         title="Unduh Gambar Struk & QR lalu buka WhatsApp"
-                        className="col-span-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-success px-2.5 text-xs font-medium text-success-foreground transition hover:bg-success/90 disabled:opacity-60"
+                        className="col-span-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-success px-3 text-xs font-medium text-success-foreground whitespace-nowrap transition hover:bg-success/90 disabled:opacity-60"
                       >
                         <MessageCircle className="h-3.5 w-3.5 shrink-0" />
                         <span>Kirim Struk WA</span>
@@ -1497,7 +1505,15 @@ function Customers() {
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
               {["Nama", "Email", "WhatsApp", "Kota", "Pesanan", "Total Belanja", "Aksi"].map((h) => (
-                <th key={h} className="whitespace-nowrap px-3 py-3 font-semibold">{h}</th>
+                <th
+                  key={h}
+                  className={cn(
+                    "whitespace-nowrap px-3 py-3 font-semibold",
+                    h === "Aksi" && "w-[176px]"
+                  )}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -1517,12 +1533,12 @@ function Customers() {
                   <td className="px-3 py-3.5 text-xs whitespace-nowrap">{u.city}</td>
                   <td className="px-3 py-3.5 text-center">{u.count}</td>
                   <td className="px-3 py-3.5 font-semibold text-primary whitespace-nowrap">{formatIDR(u.ltv)}</td>
-                  <td className="w-[168px] px-3 py-3.5 whitespace-nowrap">
-                    <div className="grid w-[156px] grid-cols-[1fr_1fr] gap-1.5">
+                  <td className="w-[176px] px-3 py-3.5 whitespace-nowrap">
+                    <div className="grid w-full grid-cols-2 gap-1.5">
                       <button
                         type="button"
                         onClick={() => openEditDialog(u)}
-                        className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium transition hover:bg-accent hover:text-accent-foreground"
+                        className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium whitespace-nowrap transition hover:bg-accent hover:text-accent-foreground"
                       >
                         <Pencil className="h-3.5 w-3.5 shrink-0" />
                         <span>Edit</span>
@@ -1532,7 +1548,7 @@ function Customers() {
                           href={waLink(u.phone, `Halo ${u.name}, salam hangat dari ${settings.storeName}!`)}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border border-input bg-background px-2 text-xs font-medium text-success transition hover:bg-success/10"
+                          className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-input bg-background px-2.5 text-xs font-medium text-success whitespace-nowrap transition hover:bg-success/10"
                         >
                           <MessageCircle className="h-3.5 w-3.5 shrink-0" />
                           <span>Chat</span>
