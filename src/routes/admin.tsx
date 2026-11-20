@@ -310,39 +310,22 @@ async function generateReceiptImageBlob(
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }
 
-function Admin() {
-  const [view, setView] = useState<View>("overview");
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobile, setMobile] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const { orders = [], settings, isAdmin, loaded } = useStore();
-  const [denied, setDenied] = useState(false);
-
-  useEffect(() => {
-    if (loaded && !isAdmin && !denied) {
-      setDenied(true);
-      toast.error("Akses Ditolak: Halaman khusus Admin Kalandra.");
-    }
-  }, [isAdmin, denied, loaded]);
-
-  if (!loaded) return null;
-  if (!isAdmin) return <Navigate to="/" />;
-
-  const deletedIds = loadDeletedOrderIds();
-  const orderOverrides = loadOrderOverrides();
-  const activeOrders = orders
-    .filter((o) => !deletedIds.includes(o.id))
-    .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
-  const pendingOrders = activeOrders.filter((o) => o.status === "Menunggu Pembayaran");
-  const unread = pendingOrders.length;
-
-  const Nav = ({ compact }: { compact?: boolean }) => (
+function SidebarNav({
+  view,
+  onSelect,
+  compact,
+}: {
+  view: View;
+  onSelect: (v: View) => void;
+  compact?: boolean;
+}) {
+  return (
     <nav className="flex flex-col gap-1.5 p-3">
       {MENU.map((m) => (
         <button
           key={m.id}
           type="button"
-          onClick={() => { setView(m.id); setMobile(false); }}
+          onClick={() => onSelect(m.id)}
           title={m.headerTitle}
           className={cn(
             "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition",
@@ -358,6 +341,37 @@ function Admin() {
       ))}
     </nav>
   );
+}
+
+function Admin() {
+  const [view, setView] = useState<View>("overview");
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { orders, settings, isAdmin, loaded } = useStore();
+  const [denied, setDenied] = useState(false);
+
+  useEffect(() => {
+    if (loaded && !isAdmin && !denied) {
+      setDenied(true);
+      toast.error("Akses Ditolak: Halaman khusus Admin Kalandra.");
+    }
+  }, [isAdmin, denied, loaded]);
+
+  const pendingOrders = useMemo(() => {
+    const safeOrders = orders ?? [];
+    const deletedIds = loadDeletedOrderIds();
+    const orderOverrides = loadOrderOverrides();
+    return safeOrders
+      .filter((o) => !deletedIds.includes(o.id))
+      .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o))
+      .filter((o) => o.status === "Menunggu Pembayaran");
+  }, [orders]);
+
+  if (!loaded) return null;
+  if (!isAdmin) return <Navigate to="/" />;
+
+  const unread = pendingOrders.length;
 
   return (
     <div className="flex min-h-screen bg-secondary">
@@ -366,7 +380,7 @@ function Admin() {
           <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
           {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
         </div>
-        <Nav compact={collapsed} />
+        <SidebarNav view={view} onSelect={(v) => setView(v)} compact={collapsed} />
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -383,7 +397,7 @@ function Admin() {
             <Gift className="h-6 w-6 text-sidebar-primary" />
             <span className="font-serif text-xl">{settings.storeName} Admin</span>
           </div>
-          <Nav />
+          <SidebarNav view={view} onSelect={(v) => { setView(v); setMobile(false); }} />
         </SheetContent>
       </Sheet>
       <div className="min-w-0 flex-1">
@@ -539,12 +553,16 @@ function downloadCSV(orders: Order[]) {
 }
 
 function Overview({ go }: { go: (v: View) => void }) {
-  const { orders = [] } = useStore();
-  const deletedIds = loadDeletedOrderIds();
-  const orderOverrides = loadOrderOverrides();
-  const visibleOrders = orders
-    .filter((o) => !deletedIds.includes(o.id))
-    .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
+  const { orders } = useStore();
+  const visibleOrders = useMemo(() => {
+    const safeOrders = orders ?? [];
+    const deletedIds = loadDeletedOrderIds();
+    const orderOverrides = loadOrderOverrides();
+    return safeOrders
+      .filter((o) => !deletedIds.includes(o.id))
+      .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
+  }, [orders]);
+
   const revenue = 48750000 + visibleOrders.filter((o) => o.status !== "Menunggu Pembayaran" && (o.status as string) !== "Dibatalkan").reduce((t, o) => t + o.total, 0) - 9_000_000;
   const active = visibleOrders.filter((o) => o.status === "Sedang Dirangkai").length;
   const kpis = [
@@ -595,7 +613,7 @@ function Overview({ go }: { go: (v: View) => void }) {
 }
 
 function Orders() {
-  const { orders = [], setOrderStatus, settings, products = [], saveProduct } = useStore();
+  const { orders, setOrderStatus, settings, products, saveProduct } = useStore();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [city, setCity] = useState<string>("all");
@@ -608,16 +626,15 @@ function Orders() {
   const [renderingImg, setRenderingImg] = useState(false);
   const paymentConfig = useMemo(() => loadPaymentConfig(), []);
 
-  const hydratedOrders = useMemo(
-    () =>
-      orders
-        .filter((o) => !deletedIds.includes(o.id))
-        .map((o) => {
-          const patch = orderOverrides[o.id];
-          return patch ? ({ ...o, ...patch } as Order) : o;
-        }),
-    [orders, orderOverrides, deletedIds]
-  );
+  const hydratedOrders = useMemo(() => {
+    const safeOrders = orders ?? [];
+    return safeOrders
+      .filter((o) => !deletedIds.includes(o.id))
+      .map((o) => {
+        const patch = orderOverrides[o.id];
+        return patch ? ({ ...o, ...patch } as Order) : o;
+      });
+  }, [orders, orderOverrides, deletedIds]);
 
   const list = hydratedOrders.filter((o) =>
     (status === "all" || o.status === status) && (city === "all" || o.city === city) &&
@@ -626,10 +643,11 @@ function Orders() {
   const handleStatusChange = (order: Order, nextStatus: OrderStatus) => {
     const prevStatus = order.status as string;
     const targetStatus = nextStatus as string;
+    const safeProducts = products ?? [];
 
     if (targetStatus === "Dibatalkan" && prevStatus !== "Dibatalkan") {
       order.items.forEach((item) => {
-        const prod = products.find((p) => p.id === item.productId);
+        const prod = safeProducts.find((p) => p.id === item.productId);
         if (prod) {
           saveProduct({ ...prod, stock: prod.stock + item.qty });
         }
@@ -644,9 +662,10 @@ function Orders() {
 
   const handleConfirmDeleteOrder = () => {
     if (!deleteTarget) return;
+    const safeProducts = products ?? [];
     if ((deleteTarget.status as string) !== "Dibatalkan") {
       deleteTarget.items.forEach((item) => {
-        const prod = products.find((p) => p.id === item.productId);
+        const prod = safeProducts.find((p) => p.id === item.productId);
         if (prod) {
           saveProduct({ ...prod, stock: prod.stock + item.qty });
         }
@@ -1235,14 +1254,14 @@ function Orders() {
 const emptyProduct = (): Product => ({ id: "p" + Date.now(), name: "", category: CATEGORIES[0], price: 0, stock: 10, image: IMAGES.hero, description: "", active: true, tags: [], rating: 5, reviews: 0 });
 
 function Products() {
-  const { products = [], categories = [], addCategory, renameCategory, deleteCategory, saveProduct, deleteProduct } = useStore();
+  const { products, categories, addCategory, renameCategory, deleteCategory, saveProduct, deleteProduct } = useStore();
   const [categoryName, setCategoryName] = useState("");
   const [categoryEdit, setCategoryEdit] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [edit, setEdit] = useState<Product | null>(null);
   const [del, setDel] = useState<Product | null>(null);
-  const list = useMemo(() => products.filter((p) => (cat === "all" || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase())), [products, q, cat]);
+  const list = useMemo(() => (products ?? []).filter((p) => (cat === "all" || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase())), [products, q, cat]);
 
   const save = () => {
     if (!edit) return;
@@ -1255,13 +1274,13 @@ function Products() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari produk" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={cat} onValueChange={setCat}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{(categories ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
         <Button onClick={() => setEdit(emptyProduct())}><Plus className="mr-1 h-4 w-4" />Tambah Produk Baru</Button>
       </div>
       <div className="mt-5 space-y-3 border-y py-4">
         <h2 className="font-serif text-xl text-primary">Kategori</h2>
         <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
+          {(categories ?? []).map((c) => (
             <div key={c} className="flex items-center gap-1 rounded-lg border bg-background px-2.5 py-1 text-sm">
               <span>{c}</span>
               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Ubah kategori ${c}`} onClick={() => { setCategoryEdit(c); setCategoryName(c); }}><Pencil className="h-3 w-3" /></Button>
@@ -1299,12 +1318,12 @@ function Products() {
       </div>
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{products.some((p) => p.id === edit?.id) ? "Edit Produk" : "Tambah Produk"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{(products ?? []).some((p) => p.id === edit?.id) ? "Edit Produk" : "Tambah Produk"}</DialogTitle></DialogHeader>
           {edit && (
             <div className="grid gap-3">
               <div className="space-y-1.5"><Label htmlFor="product-name">Nama Produk</Label><Input id="product-name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Kategori</Label>
-                <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist></div>
+                <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{(categories ?? []).map((c) => <option key={c} value={c} />)}</datalist></div>
               <div className="space-y-1.5"><Label>Status Badge</Label><Select value={edit.badge ?? (edit.tags.includes("express") ? "Same-Day" : edit.stock <= 5 ? "Slot Terbatas" : "Ready Stock")} onValueChange={(v) => { if (v !== "Ready Stock" && v !== "Slot Terbatas" && v !== "Same-Day") return; setEdit({ ...edit, badge: v, tags: v === "Same-Day" ? [...new Set([...edit.tags, "express" as const])] : edit.tags.filter((t) => t !== "express") }); }}><SelectTrigger aria-label="Status Badge"><SelectValue /></SelectTrigger><SelectContent>{["Ready Stock", "Slot Terbatas", "Same-Day"].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-1.5"><Label>Klasifikasi Isi</Label><Select value={edit.foodStatus ?? "unverified"} onValueChange={(v) => { if (v === "halal" || v === "non-halal" || v === "non-food" || v === "unverified") setEdit({ ...edit, foodStatus: v === "unverified" ? undefined : v }); }}><SelectTrigger aria-label="Klasifikasi Isi"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unverified">Belum dikonfirmasi</SelectItem><SelectItem value="halal">Makanan & minuman halal</SelectItem><SelectItem value="non-halal">Non-halal / mengandung alkohol</SelectItem><SelectItem value="non-food">Non-makanan</SelectItem></SelectContent></Select></div>
               <div className="grid grid-cols-2 gap-3">
@@ -1339,7 +1358,7 @@ interface CustomerRecord {
 }
 
 function Customers() {
-  const { users = [], orders = [], settings } = useStore();
+  const { users, orders, settings } = useStore();
   const [q, setQ] = useState("");
   const [manualCustomers, setManualCustomers] = useState<CustomerRecord[]>(() => {
     try {
@@ -1372,15 +1391,17 @@ function Customers() {
   };
 
   const mergedCustomers = useMemo(() => {
+    const safeUsers = users ?? [];
+    const safeOrders = orders ?? [];
     const map = new Map<string, CustomerRecord>();
     const deletedIds = loadDeletedOrderIds();
     const orderOverrides = loadOrderOverrides();
 
-    const activeOrders = orders
+    const activeOrders = safeOrders
       .filter((o) => !deletedIds.includes(o.id))
       .map((o) => (orderOverrides[o.id] ? ({ ...o, ...orderOverrides[o.id] } as Order) : o));
 
-    users
+    safeUsers
       .filter((u) => u.role === "customer")
       .forEach((u) => {
         const key = u.email.toLowerCase();
