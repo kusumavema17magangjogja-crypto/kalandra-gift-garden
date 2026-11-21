@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3, Package, Tag, Users, Settings, Bell, Store, ChevronLeft, Menu, TrendingUp, TrendingDown,
@@ -41,7 +41,7 @@ type View = "overview" | "orders" | "products" | "customers" | "settings";
 const MENU: { id: View; label: string; headerTitle: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Ringkasan", headerTitle: "Ringkasan", icon: BarChart3 },
   { id: "orders", label: "Kelola Pesanan", headerTitle: "Kelola Pesanan", icon: Package },
-  { id: "products", label: "Kelola Katalog & Kategori", headerTitle: "Kelola Katalog & Kategori", icon: Tag },
+  { id: "products", label: "Katalog & Kategori", headerTitle: "Kelola Katalog & Kategori", icon: Tag },
   { id: "customers", label: "Data Pelanggan", headerTitle: "Data Pelanggan", icon: Users },
   { id: "settings", label: "Pengaturan Toko", headerTitle: "Pengaturan Toko", icon: Settings },
 ];
@@ -74,7 +74,8 @@ function loadPaymentConfig(): PaymentConfig {
 function loadOrderOverrides(): Record<string, Partial<Order>> {
   try {
     const raw = localStorage.getItem("kalandra_order_overrides");
-    return raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
@@ -83,7 +84,8 @@ function loadOrderOverrides(): Record<string, Partial<Order>> {
 function loadDeletedOrderIds(): string[] {
   try {
     const raw = localStorage.getItem("kalandra_deleted_orders");
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -96,19 +98,21 @@ function buildQrImageUrl(order: Order, storeName: string, pay: PaymentConfig) {
 }
 
 function buildInvoiceWaText(o: Order, storeName: string, pay: PaymentConfig) {
-  const itemLines = o.items
+  const safeItems = Array.isArray(o.items) ? o.items : [];
+  const itemLines = safeItems
     .map((item, idx) => {
-      const addonNames = item.addons
+      const safeAddons = Array.isArray(item.addons) ? item.addons : [];
+      const addonNames = safeAddons
         .map((id) => ADDONS.find((a) => a.id === id)?.label)
         .filter(Boolean);
-      const itemTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+      const itemTotal = (item.basePrice + addonsTotal(safeAddons)) * item.qty;
       return `${idx + 1}. ${item.name} (${item.qty}x) — ${formatIDR(itemTotal)}${
         addonNames.length ? `\n   + Add-ons: ${addonNames.join(", ")}` : ""
       }${item.to ? `\n   + Untuk: ${item.to} (Dari: ${item.from || "-"})` : ""}`;
     })
     .join("\n");
 
-  const recipientName = o.items[0]?.to || o.customerName;
+  const recipientName = safeItems[0]?.to || o.customerName;
 
   return [
     `*INVOICE PESANAN — ${storeName.toUpperCase()}*`,
@@ -149,7 +153,8 @@ async function generateReceiptImageBlob(
   const canvas = document.createElement("canvas");
   const width = 640;
   const lineHeight = 32;
-  const estimatedHeight = 860 + o.items.length * 46;
+  const safeItems = Array.isArray(o.items) ? o.items : [];
+  const estimatedHeight = 860 + safeItems.length * 46;
   canvas.width = width;
   canvas.height = estimatedHeight;
   const ctx = canvas.getContext("2d");
@@ -216,7 +221,7 @@ async function generateReceiptImageBlob(
   y += 24;
   ctx.fillStyle = "#111827";
   ctx.font = "bold 16px sans-serif";
-  const recipient = o.items[0]?.to || o.customerName;
+  const recipient = safeItems[0]?.to || o.customerName;
   ctx.fillText(`${recipient} ${o.phone && o.phone !== "-" ? `(${o.phone})` : ""}`, 52, y);
   y += 22;
   ctx.fillStyle = "#4B5563";
@@ -239,8 +244,9 @@ async function generateReceiptImageBlob(
   ctx.fillText("RINCIAN ITEM", 52, y);
   y += 26;
 
-  o.items.forEach((item) => {
-    const rowTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+  safeItems.forEach((item) => {
+    const safeAddons = Array.isArray(item.addons) ? item.addons : [];
+    const rowTotal = (item.basePrice + addonsTotal(safeAddons)) * item.qty;
     ctx.fillStyle = "#111827";
     ctx.font = "bold 15px sans-serif";
     ctx.fillText(`${item.name} (${item.qty}x)`, 52, y);
@@ -297,8 +303,15 @@ async function generateReceiptImageBlob(
     qrImg.crossOrigin = "anonymous";
     qrImg.src = buildQrImageUrl(o, storeName, pay);
     await new Promise<void>((resolve) => {
-      qrImg.onload = () => resolve();
-      qrImg.onerror = () => resolve();
+      const timer = setTimeout(() => resolve(), 2500);
+      qrImg.onload = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      qrImg.onerror = () => {
+        clearTimeout(timer);
+        resolve();
+      };
     });
     if (qrImg.complete && qrImg.naturalWidth > 0) {
       ctx.drawImage(qrImg, width - 208, y + 16, 140, 140);
@@ -336,7 +349,7 @@ function SidebarNav({
           )}
         >
           <m.icon className="h-4 w-4 shrink-0" />
-          {!compact && <span className="whitespace-nowrap">{m.label}</span>}
+          {!compact && <span className="truncate whitespace-nowrap">{m.label}</span>}
         </button>
       ))}
     </nav>
@@ -344,22 +357,24 @@ function SidebarNav({
 }
 
 function Admin() {
+  const navigate = useNavigate();
   const [view, setView] = useState<View>("overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const { orders, settings, isAdmin, loaded } = useStore();
-  const [denied, setDenied] = useState(false);
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
-    if (loaded && !isAdmin && !denied) {
-      setDenied(true);
+    if (loaded && !isAdmin && !redirectedRef.current) {
+      redirectedRef.current = true;
       toast.error("Akses Ditolak: Halaman khusus Admin Kalandra.");
+      navigate({ to: "/", replace: true });
     }
-  }, [isAdmin, denied, loaded]);
+  }, [isAdmin, loaded, navigate]);
 
   const pendingOrders = useMemo(() => {
-    const safeOrders = orders ?? [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     const deletedIds = loadDeletedOrderIds();
     const orderOverrides = loadOrderOverrides();
     return safeOrders
@@ -368,14 +383,21 @@ function Admin() {
       .filter((o) => o.status === "Menunggu Pembayaran");
   }, [orders]);
 
-  if (!loaded) return null;
-  if (!isAdmin) return <Navigate to="/" />;
+  if (!loaded) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-secondary text-sm text-muted-foreground">
+        Memuat Admin Panel...
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
 
   const unread = pendingOrders.length;
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-64")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all md:flex", collapsed ? "w-16" : "w-60")}>
         <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
           <Gift className="h-6 w-6 shrink-0 text-sidebar-primary" />
           {!collapsed && <span className="truncate font-serif text-lg font-semibold leading-tight">{settings.storeName} Admin</span>}
@@ -441,7 +463,7 @@ function Admin() {
                               {o.customerName} <span className="font-normal text-muted-foreground">· {o.id}</span>
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
-                              {o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}
+                              {(o.items ?? []).map((i) => `${i.name} (${i.qty}x)`).join(", ")}
                             </p>
                           </div>
                           <span className="shrink-0 text-xs font-bold text-primary">{formatIDR(o.total)}</span>
@@ -540,7 +562,7 @@ function downloadCSV(orders: Order[]) {
       o.id,
       o.customerName,
       o.phone,
-      o.items.map((i) => i.name).join(" / "),
+      (o.items ?? []).map((i) => i.name).join(" / "),
       o.city,
       o.address || "-",
       formatDate(o.deliveryDate),
@@ -555,7 +577,7 @@ function downloadCSV(orders: Order[]) {
 function Overview({ go }: { go: (v: View) => void }) {
   const { orders } = useStore();
   const visibleOrders = useMemo(() => {
-    const safeOrders = orders ?? [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     const deletedIds = loadDeletedOrderIds();
     const orderOverrides = loadOrderOverrides();
     return safeOrders
@@ -591,10 +613,10 @@ function Overview({ go }: { go: (v: View) => void }) {
           <ul className="mt-4 divide-y">
             {visibleOrders.slice(0, 5).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                <img src={o.items[0]?.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                <img src={o.items?.[0]?.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{o.customerName} <span className="text-muted-foreground">· {o.id}</span></p>
-                  <p className="truncate text-xs text-muted-foreground">{o.items[0]?.name} · {o.city}{o.address && o.address !== "-" ? ` (${o.address})` : ""}</p>
+                  <p className="truncate text-xs text-muted-foreground">{o.items?.[0]?.name} · {o.city}{o.address && o.address !== "-" ? ` (${o.address})` : ""}</p>
                 </div>
                 <span className="font-semibold">{formatIDR(o.total)}</span><StatusBadge status={o.status} />
               </li>
@@ -627,7 +649,7 @@ function Orders() {
   const paymentConfig = useMemo(() => loadPaymentConfig(), []);
 
   const hydratedOrders = useMemo(() => {
-    const safeOrders = orders ?? [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     return safeOrders
       .filter((o) => !deletedIds.includes(o.id))
       .map((o) => {
@@ -641,12 +663,13 @@ function Orders() {
     (o.customerName + o.id + (o.address || "")).toLowerCase().includes(q.toLowerCase()));
 
   const handleStatusChange = (order: Order, nextStatus: OrderStatus) => {
+    if (!nextStatus || order.status === nextStatus) return;
     const prevStatus = order.status as string;
     const targetStatus = nextStatus as string;
-    const safeProducts = products ?? [];
+    const safeProducts = Array.isArray(products) ? products : [];
 
     if (targetStatus === "Dibatalkan" && prevStatus !== "Dibatalkan") {
-      order.items.forEach((item) => {
+      (order.items ?? []).forEach((item) => {
         const prod = safeProducts.find((p) => p.id === item.productId);
         if (prod) {
           saveProduct({ ...prod, stock: prod.stock + item.qty });
@@ -662,9 +685,9 @@ function Orders() {
 
   const handleConfirmDeleteOrder = () => {
     if (!deleteTarget) return;
-    const safeProducts = products ?? [];
+    const safeProducts = Array.isArray(products) ? products : [];
     if ((deleteTarget.status as string) !== "Dibatalkan") {
-      deleteTarget.items.forEach((item) => {
+      (deleteTarget.items ?? []).forEach((item) => {
         const prod = safeProducts.find((p) => p.id === item.productId);
         if (prod) {
           saveProduct({ ...prod, stock: prod.stock + item.qty });
@@ -832,6 +855,7 @@ function Orders() {
           <tbody>
             {list.map((o) => {
               const isCancelled = (o.status as string) === "Dibatalkan";
+              const safeStatus = ALL_STATUSES.includes(o.status) ? o.status : ALL_STATUSES[0];
               return (
                 <tr key={o.id} className={cn("border-b align-top last:border-0 hover:bg-secondary/50", isCancelled && "opacity-60")}>
                   <td className="max-w-[120px] truncate px-3 py-3.5 font-semibold" title={o.id}>{o.id}</td>
@@ -842,7 +866,7 @@ function Orders() {
                     )}
                   </td>
                   <td className="max-w-[160px] px-3 py-3.5">
-                    <p className="line-clamp-2 text-xs">{o.items.map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
+                    <p className="line-clamp-2 text-xs">{(o.items ?? []).map((i) => `${i.name} (${i.qty}x)`).join(", ")}</p>
                   </td>
                   <td className="max-w-[190px] px-3 py-3.5">
                     <div className="flex items-start gap-1.5 text-xs">
@@ -858,14 +882,14 @@ function Orders() {
                   <td className="px-3 py-3.5 text-xs whitespace-nowrap">{formatDate(o.deliveryDate)}</td>
                   <td className="px-3 py-3.5 font-medium whitespace-nowrap">{formatIDR(o.total)}</td>
                   <td className="px-3 py-3.5">
-                    <Select value={o.status} onValueChange={(v) => handleStatusChange(o, v as OrderStatus)}>
+                    <Select value={safeStatus} onValueChange={(v) => handleStatusChange(o, v as OrderStatus)}>
                       <SelectTrigger className="h-8 w-40 border-0 bg-transparent p-0 shadow-none">
                         {isCancelled ? (
                           <span className="inline-flex items-center rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-semibold text-destructive">
                             Dibatalkan
                           </span>
                         ) : (
-                          <StatusBadge status={o.status} />
+                          <StatusBadge status={safeStatus} />
                         )}
                       </SelectTrigger>
                       <SelectContent>{ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
@@ -878,7 +902,7 @@ function Orders() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => setEditOrder({ ...o, items: o.items.map((it) => ({ ...it })) })}
+                          onClick={() => setEditOrder({ ...o, items: (o.items ?? []).map((it) => ({ ...it })) })}
                           className="h-8 w-full rounded-full px-2 text-xs"
                         >
                           <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />
@@ -1031,8 +1055,8 @@ function Orders() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Detail Penerima & Kartu Ucapan
                 </p>
-                {editOrder.items.map((item, idx) => (
-                  <div key={item.key} className="space-y-2 rounded-xl border bg-muted/20 p-3">
+                {(editOrder.items ?? []).map((item, idx) => (
+                  <div key={item.key || idx} className="space-y-2 rounded-xl border bg-muted/20 p-3">
                     <p className="text-xs font-semibold text-primary">{item.name} ({item.qty}x)</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
@@ -1086,17 +1110,17 @@ function Orders() {
       <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
         <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">Kartu Ucapan · {card?.id}</DialogTitle></DialogHeader>
-          {card?.items.map((i) => {
+          {(card?.items ?? []).map((i, idx) => {
             const itemExt = i as typeof i & { recipientAddress?: string; recipientCity?: string; recipientPhone?: string };
             const resolvedAddr =
-              card.address && card.address !== "-"
+              card?.address && card.address !== "-"
                 ? card.address
                 : itemExt.recipientAddress
                 ? `${itemExt.recipientAddress}${itemExt.recipientCity ? ` (${itemExt.recipientCity})` : ""}${itemExt.recipientPhone ? ` · HP: ${itemExt.recipientPhone}` : ""}`
-                : `Area Pengiriman ${card.city}`;
+                : `Area Pengiriman ${card?.city ?? ""}`;
 
             return (
-              <div key={i.key} className="space-y-2">
+              <div key={i.key || idx} className="space-y-2">
                 <p className="text-sm text-muted-foreground">{i.name} · Pita <b>{ribbonLabel(i.ribbon)}</b></p>
                 <GreetingCard
                   to={i.to}
@@ -1150,7 +1174,7 @@ function Orders() {
                 <div className="space-y-1 border-b border-dashed pb-3 text-xs">
                   <p className="font-semibold uppercase tracking-wider text-muted-foreground">Tujuan Pengiriman</p>
                   <p className="font-medium text-foreground">
-                    {invoice.items[0]?.to || invoice.customerName}{" "}
+                    {invoice.items?.[0]?.to || invoice.customerName}{" "}
                     {invoice.phone && invoice.phone !== "-" ? `(${invoice.phone})` : ""}
                   </p>
                   <p className="leading-relaxed text-muted-foreground">
@@ -1160,13 +1184,14 @@ function Orders() {
 
                 <div className="space-y-2 border-b border-dashed pb-3 text-xs">
                   <p className="font-semibold uppercase tracking-wider text-muted-foreground">Rincian Item</p>
-                  {invoice.items.map((item) => {
-                    const addonLabels = item.addons
+                  {(invoice.items ?? []).map((item, idx) => {
+                    const safeAddons = Array.isArray(item.addons) ? item.addons : [];
+                    const addonLabels = safeAddons
                       .map((id) => ADDONS.find((a) => a.id === id)?.label)
                       .filter(Boolean);
-                    const rowTotal = (item.basePrice + addonsTotal(item.addons)) * item.qty;
+                    const rowTotal = (item.basePrice + addonsTotal(safeAddons)) * item.qty;
                     return (
-                      <div key={item.key} className="space-y-0.5">
+                      <div key={item.key || idx} className="space-y-0.5">
                         <div className="flex justify-between font-medium">
                           <span>{item.name} ({item.qty}x)</span>
                           <span>{formatIDR(rowTotal)}</span>
@@ -1261,7 +1286,7 @@ function Products() {
   const [cat, setCat] = useState("all");
   const [edit, setEdit] = useState<Product | null>(null);
   const [del, setDel] = useState<Product | null>(null);
-  const list = useMemo(() => (products ?? []).filter((p) => (cat === "all" || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase())), [products, q, cat]);
+  const list = useMemo(() => (Array.isArray(products) ? products : []).filter((p) => (cat === "all" || p.category === cat) && p.name.toLowerCase().includes(q.toLowerCase())), [products, q, cat]);
 
   const save = () => {
     if (!edit) return;
@@ -1274,13 +1299,13 @@ function Products() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Cari produk" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <Select value={cat} onValueChange={setCat}><SelectTrigger className="md:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{(categories ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+          <SelectContent><SelectItem value="all">Semua Kategori</SelectItem>{(Array.isArray(categories) ? categories : []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
         <Button onClick={() => setEdit(emptyProduct())}><Plus className="mr-1 h-4 w-4" />Tambah Produk Baru</Button>
       </div>
       <div className="mt-5 space-y-3 border-y py-4">
         <h2 className="font-serif text-xl text-primary">Kategori</h2>
         <div className="flex flex-wrap gap-2">
-          {(categories ?? []).map((c) => (
+          {(Array.isArray(categories) ? categories : []).map((c) => (
             <div key={c} className="flex items-center gap-1 rounded-lg border bg-background px-2.5 py-1 text-sm">
               <span>{c}</span>
               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Ubah kategori ${c}`} onClick={() => { setCategoryEdit(c); setCategoryName(c); }}><Pencil className="h-3 w-3" /></Button>
@@ -1318,12 +1343,12 @@ function Products() {
       </div>
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{(products ?? []).some((p) => p.id === edit?.id) ? "Edit Produk" : "Tambah Produk"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-serif text-2xl text-primary">{(Array.isArray(products) ? products : []).some((p) => p.id === edit?.id) ? "Edit Produk" : "Tambah Produk"}</DialogTitle></DialogHeader>
           {edit && (
             <div className="grid gap-3">
               <div className="space-y-1.5"><Label htmlFor="product-name">Nama Produk</Label><Input id="product-name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Kategori</Label>
-                <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{(categories ?? []).map((c) => <option key={c} value={c} />)}</datalist></div>
+                <Input aria-label="Kategori produk" list="product-categories" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /><datalist id="product-categories">{(Array.isArray(categories) ? categories : []).map((c) => <option key={c} value={c} />)}</datalist></div>
               <div className="space-y-1.5"><Label>Status Badge</Label><Select value={edit.badge ?? (edit.tags.includes("express") ? "Same-Day" : edit.stock <= 5 ? "Slot Terbatas" : "Ready Stock")} onValueChange={(v) => { if (v !== "Ready Stock" && v !== "Slot Terbatas" && v !== "Same-Day") return; setEdit({ ...edit, badge: v, tags: v === "Same-Day" ? [...new Set([...edit.tags, "express" as const])] : edit.tags.filter((t) => t !== "express") }); }}><SelectTrigger aria-label="Status Badge"><SelectValue /></SelectTrigger><SelectContent>{["Ready Stock", "Slot Terbatas", "Same-Day"].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-1.5"><Label>Klasifikasi Isi</Label><Select value={edit.foodStatus ?? "unverified"} onValueChange={(v) => { if (v === "halal" || v === "non-halal" || v === "non-food" || v === "unverified") setEdit({ ...edit, foodStatus: v === "unverified" ? undefined : v }); }}><SelectTrigger aria-label="Klasifikasi Isi"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unverified">Belum dikonfirmasi</SelectItem><SelectItem value="halal">Makanan & minuman halal</SelectItem><SelectItem value="non-halal">Non-halal / mengandung alkohol</SelectItem><SelectItem value="non-food">Non-makanan</SelectItem></SelectContent></Select></div>
               <div className="grid grid-cols-2 gap-3">
@@ -1391,8 +1416,8 @@ function Customers() {
   };
 
   const mergedCustomers = useMemo(() => {
-    const safeUsers = users ?? [];
-    const safeOrders = orders ?? [];
+    const safeUsers = Array.isArray(users) ? users : [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     const map = new Map<string, CustomerRecord>();
     const deletedIds = loadDeletedOrderIds();
     const orderOverrides = loadOrderOverrides();
