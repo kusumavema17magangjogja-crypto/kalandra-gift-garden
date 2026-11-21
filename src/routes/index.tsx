@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   Search,
   ShoppingBag,
@@ -16,7 +18,6 @@ import {
   MapPin,
   ShieldCheck,
   Star,
-  Calendar,
   BookOpen,
   Instagram,
   Phone,
@@ -24,164 +25,33 @@ import {
   Gift,
   Truck,
   Camera,
+  LayoutDashboard,
 } from "lucide-react";
+import { useStore } from "@/lib/store";
+import {
+  ADDONS,
+  CITIES,
+  SHIPPING_FEE,
+  addonsTotal,
+  formatIDR,
+  waLink,
+  type Product,
+  type RibbonColor,
+} from "@/lib/data";
 
-// --- DATA PRODUK ---
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  moment: string;
-  price: number;
-  originalPrice?: number;
-  badge: string;
-  halal: boolean;
-  isFlashSale?: boolean;
-  description: string;
-  image: string;
-}
-
-const PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Sage Celebration Basket",
-    category: "Birthday & Anniv",
-    moment: "Romantis & Anniv",
-    price: 785000,
-    originalPrice: 920000,
-    badge: "Same-Day",
-    halal: true,
-    isFlashSale: true,
-    description:
-      "Keranjang rotan berisi sparkling juice non-alkohol, cokelat artisan, dan bunga kering premium.",
-    image:
-      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p2",
-    name: "Peach Rose Anniversary Box",
-    category: "Birthday & Anniv",
-    moment: "Romantis & Anniv",
-    price: 650000,
-    originalPrice: 750000,
-    badge: "Slot Terbatas",
-    halal: true,
-    isFlashSale: true,
-    description:
-      "Buket mawar peach segar, macaron Prancis, dan lilin aromaterapi santal dalam hardbox eksklusif.",
-    image:
-      "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p3",
-    name: "Parsel Fitri Zamrud",
-    category: "Lebaran & Hari Raya",
-    moment: "Corporate Care",
-    price: 925000,
-    badge: "Ready Stock",
-    halal: true,
-    description:
-      "Kurma Ajwa pilihan, kue nastar wisman, putri salju, kastengel dalam box hijau zamrud aksen emas.",
-    image:
-      "https://images.unsplash.com/photo-1607344645866-009c320b63e0?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p4",
-    name: "Hampers Lebaran Mini Berkah",
-    category: "Lebaran & Hari Raya",
-    moment: "Get Well Soon",
-    price: 450000,
-    originalPrice: 525000,
-    badge: "Same-Day",
-    halal: true,
-    isFlashSale: true,
-    description:
-      "Paket hemat 3 toples kue kering premium & kurma Tunisia untuk kerabat dan kolega.",
-    image:
-      "https://images.unsplash.com/photo-1513885535751-8b9238bd345a?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p5",
-    name: "Seserahan Akrilik Gold 7 Box",
-    category: "Seserahan & Hantaran",
-    moment: "Wedding",
-    price: 3500000,
-    badge: "Slot Terbatas",
-    halal: true,
-    description:
-      "Set 7 kotak akrilik bingkai emas elegan, dekor bunga artifisial & pita terracotta-sage.",
-    image:
-      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p6",
-    name: "Hantaran Mahar Al-Qur'an",
-    category: "Seserahan & Hantaran",
-    moment: "Wedding",
-    price: 1250000,
-    badge: "Slot Terbatas",
-    halal: true,
-    description:
-      "Box mahar eksklusif dengan Al-Qur'an cover beludru, tasbih mutiara, dan rangkaian bunga cantik.",
-    image:
-      "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p7",
-    name: "Little Bunny Newborn Set",
-    category: "Baby Born",
-    moment: "Baby Born",
-    price: 595000,
-    originalPrice: 680000,
-    badge: "Same-Day",
-    halal: true,
-    isFlashSale: true,
-    description:
-      "Baju bayi katun organik, boneka kelinci rajut, teether kayu aman, dan selimut muslin lembut.",
-    image:
-      "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "p8",
-    name: "Executive Green Gift Box",
-    category: "Corporate Parcel",
-    moment: "Grand Opening",
-    price: 1150000,
-    badge: "Same-Day",
-    halal: true,
-    description:
-      "Kopi signature nusantara, teh hijau artisan, notebook kulit vegan, dan pulpen logam emas.",
-    image:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
-const HERO_SLIDES = [
-  {
-    tag: "KALANDRA • HAMPERS & SESERAHAN",
-    title: "Rangkaian Kasih & Keanggunan di Setiap Momen Berharga",
-    subtitle:
-      "Dirangkai tangan, lengkap dengan kartu ucapan personal, dan dikirim fotonya sebelum sampai ke orang tersayang.",
-    image:
-      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    tag: "SPESIAL PERNIKAHAN • SEWA & BELI PUTUS",
-    title: "Seserahan Akrilik & Hantaran Mahar Mewah",
-    subtitle:
-      "Bebas request palet warna tema pernikahanmu. Terima beres mulai dari penataan hingga serah terima.",
-    image:
-      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    tag: "CORPORATE & HARI RAYA • 100% HALAL",
-    title: "Kirim Apresiasi Berkelas untuk Klien & Keluarga",
-    subtitle:
-      "Custom logo perusahaan, pengiriman instan Jabodetabek, serta packing kayu aman antar kota.",
-    image:
-      "https://images.unsplash.com/photo-1513885535751-8b9238bd345a?auto=format&fit=crop&w=1600&q=80",
-  },
-];
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Kalandra — Hampers, Parsel & Seserahan Eksklusif" },
+      {
+        name: "description",
+        content:
+          "Rangkaian kasih & keanggunan di setiap momen berharga. 100% Halal, free kartu ucapan personal, kirim foto sebelum diantar.",
+      },
+    ],
+  }),
+  component: HomePage,
+});
 
 const MOMENTS = [
   { name: "Duka Cita", count: "3 produk", emoji: "🤍" },
@@ -194,17 +64,11 @@ const MOMENTS = [
   { name: "Corporate Care", count: "12 produk", emoji: "💼" },
 ];
 
-const RIBBON_COLORS = [
-  { name: "Emerald Green", hex: "#14452F" },
-  { name: "Champagne Gold", hex: "#D4AF37" },
-  { name: "Soft Terracotta", hex: "#C87A5B" },
-  { name: "Burgundy", hex: "#6E1E2A" },
-];
-
-const ADD_ONS = [
-  { id: "a1", name: "Wooden Acrylic Topper", price: 25000 },
-  { id: "a2", name: "Artisan Chocolate Box", price: 45000 },
-  { id: "a3", name: "Spunbond Bag Premium", price: 15000 },
+const RIBBON_OPTIONS: { id: RibbonColor; name: string; hex: string }[] = [
+  { id: "emerald", name: "Emerald Green", hex: "#14452F" },
+  { id: "gold", name: "Champagne Gold", hex: "#D4AF37" },
+  { id: "terracotta", name: "Soft Terracotta", hex: "#C87A5B" },
+  { id: "burgundy", name: "Burgundy", hex: "#6E1E2A" },
 ];
 
 const ARTICLES = [
@@ -231,61 +95,102 @@ const ARTICLES = [
   },
 ];
 
-interface CartItem {
+interface LocalCartItem {
   key: string;
   product: Product;
   to: string;
   from: string;
   message: string;
-  ribbon: string;
+  ribbon: RibbonColor;
   deliveryDate: string;
   qty: number;
-  selectedAddons: string[];
+  addons: string[];
   unitTotal: number;
 }
 
-const formatRupiah = (num: number) =>
-  "Rp " + num.toLocaleString("id-ID");
+function HomePage() {
+  const navigate = useNavigate();
+  const store = useStore();
+  const { products, categories, settings, isAdmin } = store;
 
-export default function Index() {
-  // --- STATE ---
-  const [city, setCity] = useState("Jabodetabek");
+  // --- STATE UI ---
+  const [city, setCity] = useState<string>(CITIES[0] || "Jabodetabek");
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedMoment, setSelectedMoment] = useState("Semua");
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Flash Sale Timer (detik)
+  // Countdown Flash Sale
   const [secondsLeft, setSecondsLeft] = useState(5 * 3600 + 42 * 60 + 19);
 
-  // Modal Pemesanan
+  // Modal Pemesanan Lengkap
   const [orderProduct, setOrderProduct] = useState<Product | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
   const [cardTo, setCardTo] = useState("");
   const [cardFrom, setCardFrom] = useState("");
   const [cardMessage, setCardMessage] = useState("");
-  const [ribbonColor, setRibbonColor] = useState("Emerald Green");
-  const [deliveryDate, setDeliveryDate] = useState("2026-11-22");
+  const [ribbonColor, setRibbonColor] = useState<RibbonColor>("emerald");
+  const [deliveryDate, setDeliveryDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
   const [orderQty, setOrderQty] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  // Keranjang
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Keranjang Belanja
+  const [cart, setCart] = useState<LocalCartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Admin Login Mini Modal (supaya tidak ganggu halaman utama)
+  // Modal Login Admin Kecil
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [adminUser, setAdminUser] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
   const [adminPass, setAdminPass] = useState("");
-  const [adminError, setAdminError] = useState("");
+
+  const heroSlides = useMemo(
+    () => [
+      {
+        tag: "KALANDRA • HAMPERS & SESERAHAN",
+        title:
+          settings.heroHeadline ||
+          "Rangkaian Kasih & Keanggunan di Setiap Momen Berharga",
+        subtitle:
+          settings.heroSubheadline ||
+          "Dirangkai tangan, lengkap dengan kartu ucapan personal, dan dikirim fotonya sebelum sampai ke orang tersayang.",
+        image:
+          settings.heroImage ||
+          "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=80",
+      },
+      {
+        tag: "SPESIAL PERNIKAHAN • SEWA & BELI PUTUS",
+        title: "Seserahan Akrilik & Hantaran Mahar Mewah",
+        subtitle:
+          "Bebas request palet warna tema pernikahanmu. Terima beres mulai dari penataan hingga serah terima.",
+        image:
+          "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1600&q=80",
+      },
+      {
+        tag: "CORPORATE & HARI RAYA • 100% HALAL",
+        title: "Kirim Apresiasi Berkelas untuk Klien & Keluarga",
+        subtitle:
+          "Custom logo perusahaan, pengiriman instan Jabodetabek, serta packing kayu aman antar kota.",
+        image:
+          "https://images.unsplash.com/photo-1513885535751-8b9238bd345a?auto=format&fit=crop&w=1600&q=80",
+      },
+    ],
+    [settings.heroHeadline, settings.heroSubheadline, settings.heroImage]
+  );
 
   // Auto Slider
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5500);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   // Countdown Flash Sale
   useEffect(() => {
@@ -299,13 +204,25 @@ export default function Index() {
   const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
   const seconds = String(secondsLeft % 60).padStart(2, "0");
 
-  // Filter Produk
+  const activeProducts = useMemo(
+    () => (Array.isArray(products) ? products.filter((p) => p.active !== false) : []),
+    [products]
+  );
+
+  const flashSaleProducts = useMemo(
+    () => activeProducts.slice(0, 4),
+    [activeProducts]
+  );
+
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((p) => {
+    return activeProducts.filter((p) => {
       const matchCat =
         selectedCategory === "Semua" || p.category === selectedCategory;
       const matchMom =
-        selectedMoment === "Semua" || p.moment === selectedMoment;
+        selectedMoment === "Semua" ||
+        (p.category + " " + p.name + " " + p.description)
+          .toLowerCase()
+          .includes(selectedMoment.split(" ")[0].toLowerCase());
       const q = activeSearch.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -314,17 +231,14 @@ export default function Index() {
         p.category.toLowerCase().includes(q);
       return matchCat && matchMom && matchSearch;
     });
-  }, [selectedCategory, selectedMoment, activeSearch]);
+  }, [activeProducts, selectedCategory, selectedMoment, activeSearch]);
 
-  const flashSaleProducts = PRODUCTS.filter((p) => p.isFlashSale);
-
-  // Buka Pop-up Pemesanan
   const openOrderModal = (product: Product) => {
     setOrderProduct(product);
     setCardTo("");
     setCardFrom("");
     setCardMessage("");
-    setRibbonColor("Emerald Green");
+    setRibbonColor("emerald");
     setOrderQty(1);
     setSelectedAddons([]);
   };
@@ -337,19 +251,12 @@ export default function Index() {
 
   const currentModalUnitPrice = useMemo(() => {
     if (!orderProduct) return 0;
-    const addonsSum = ADD_ONS.filter((a) =>
-      selectedAddons.includes(a.id)
-    ).reduce((acc, cur) => acc + cur.price, 0);
-    return orderProduct.price + addonsSum;
+    return orderProduct.price + addonsTotal(selectedAddons);
   }, [orderProduct, selectedAddons]);
 
   const handleAddToCart = () => {
     if (!orderProduct) return;
-    const addonNames = ADD_ONS.filter((a) =>
-      selectedAddons.includes(a.id)
-    ).map((a) => a.name);
-
-    const newItem: CartItem = {
+    const newItem: LocalCartItem = {
       key: `${orderProduct.id}-${Date.now()}`,
       product: orderProduct,
       to: cardTo || "Penerima",
@@ -358,65 +265,131 @@ export default function Index() {
       ribbon: ribbonColor,
       deliveryDate,
       qty: orderQty,
-      selectedAddons: addonNames,
+      addons: selectedAddons,
       unitTotal: currentModalUnitPrice,
     };
 
     setCart((prev) => [...prev, newItem]);
     setOrderProduct(null);
     setIsCartOpen(true);
+    toast.success(`${orderProduct.name} ditambahkan ke keranjang`);
   };
 
   const handleDirectWhatsApp = () => {
     if (!orderProduct) return;
-    const addonNames = ADD_ONS.filter((a) =>
-      selectedAddons.includes(a.id)
-    ).map((a) => a.name);
+    const addonLabels = selectedAddons
+      .map((id) => ADDONS.find((a) => a.id === id)?.label)
+      .filter(Boolean);
     const total = currentModalUnitPrice * orderQty;
-    const text = `Halo Kalandra Hampers! Saya mau pesan:\n• Produk: *${orderProduct.name}* (${orderQty}x)\n• Area: ${city}\n• Tgl Kirim: ${deliveryDate}\n• Warna Pita: ${ribbonColor}\n• Add-ons: ${addonNames.length ? addonNames.join(", ") : "-"}\n• Kartu Ucapan -> Untuk: ${cardTo || "-"} | Dari: ${cardFrom || "-"}\n• Pesan: "${cardMessage || "-"}"\n• Total Estimasi: *${formatRupiah(total)}*`;
-    window.open(
-      `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`,
-      "_blank"
-    );
+    const ribbonName =
+      RIBBON_OPTIONS.find((r) => r.id === ribbonColor)?.name || ribbonColor;
+
+    // Jika store punya fungsi createOrder/placeOrder, simpan ke state admin juga
+    const anyStore = store as unknown as Record<string, unknown>;
+    if (typeof anyStore.placeOrder === "function") {
+      try {
+        (anyStore.placeOrder as (payload: unknown) => void)({
+          customerName: customerName || cardFrom || "Pelanggan Web",
+          phone: customerPhone || "-",
+          city,
+          address: customerAddress || "-",
+          deliveryDate: new Date(deliveryDate).toISOString(),
+          items: [
+            {
+              key: `item-${Date.now()}`,
+              productId: orderProduct.id,
+              name: orderProduct.name,
+              image: orderProduct.image,
+              basePrice: orderProduct.price,
+              qty: orderQty,
+              addons: selectedAddons,
+              ribbon: ribbonColor,
+              to: cardTo || "Penerima",
+              from: cardFrom || "Pengirim",
+              message: cardMessage || "-",
+            },
+          ],
+        });
+      } catch {
+        // Tetap lanjut buka WA
+      }
+    }
+
+    const text = [
+      `Halo ${settings.storeName}! Saya mau pesan:`,
+      `• Produk: *${orderProduct.name}* (${orderQty}x)`,
+      `• Kota Tujuan: ${city}`,
+      customerAddress ? `• Alamat: ${customerAddress}` : null,
+      `• Tgl Kirim: ${deliveryDate}`,
+      `• Warna Pita: ${ribbonName}`,
+      `• Add-ons: ${addonLabels.length ? addonLabels.join(", ") : "-"}`,
+      `• Kartu Ucapan -> Untuk: ${cardTo || "-"} | Dari: ${cardFrom || "-"}`,
+      `• Pesan: "${cardMessage || "-"}"`,
+      `• Total Estimasi: *${formatIDR(total)}*`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    window.open(waLink(settings.whatsappNumber, text), "_blank", "noreferrer");
   };
 
   const handleCartCheckoutWA = () => {
     if (cart.length === 0) return;
-    const lines = cart.map(
-      (item, idx) =>
-        `${idx + 1}. *${item.product.name}* (${item.qty}x) - Pita: ${item.ribbon}, Tgl: ${item.deliveryDate}, Untuk: ${item.to} (${formatRupiah(item.unitTotal * item.qty)})`
-    );
-    const grandTotal = cart.reduce(
-      (sum, item) => sum + item.unitTotal * item.qty,
-      0
-    );
-    const text = `Halo Kalandra Hampers! Saya ingin checkout keranjang:\n\n${lines.join("\n")}\n\nTotal: *${formatRupiah(grandTotal)}*\nArea Pengiriman: ${city}`;
-    window.open(
-      `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`,
-      "_blank"
-    );
+    const shipping = SHIPPING_FEE[city] ?? 30000;
+    const subtotal = cart.reduce((sum, item) => sum + item.unitTotal * item.qty, 0);
+    const grandTotal = subtotal + shipping;
+
+    const lines = cart.map((item, idx) => {
+      const rName =
+        RIBBON_OPTIONS.find((r) => r.id === item.ribbon)?.name || item.ribbon;
+      return `${idx + 1}. *${item.product.name}* (${item.qty}x) — Pita: ${rName}, Kirim: ${item.deliveryDate}, Untuk: ${item.to} (${formatIDR(item.unitTotal * item.qty)})`;
+    });
+
+    const text = [
+      `Halo ${settings.storeName}! Saya ingin checkout keranjang:`,
+      ``,
+      ...lines,
+      ``,
+      `Subtotal: ${formatIDR(subtotal)}`,
+      `Ongkir (${city}): ${formatIDR(shipping)}`,
+      `*TOTAL: ${formatIDR(grandTotal)}*`,
+    ].join("\n");
+
+    window.open(waLink(settings.whatsappNumber, text), "_blank", "noreferrer");
   };
 
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminUser === "admin" && adminPass === "kalandra123") {
-      setAdminError("");
-      setIsAdminModalOpen(false);
-      window.location.href = "/admin";
-    } else {
-      setAdminError("Username atau password admin salah.");
+    const anyStore = store as unknown as Record<string, unknown>;
+
+    // Coba panggil fungsi login dari useStore jika tersedia
+    if (typeof anyStore.login === "function") {
+      const ok = (anyStore.login as (email: string, pass?: string) => boolean)(
+        adminEmail.trim() || "admin@kalandra.id",
+        adminPass
+      );
+      if (ok !== false) {
+        setIsAdminModalOpen(false);
+        toast.success("Berhasil masuk ke Admin Panel");
+        navigate({ to: "/admin" });
+        return;
+      }
     }
+
+    // Fallback: arahkan ke /login jika ada halaman login khusus di proyek
+    setIsAdminModalOpen(false);
+    navigate({ to: "/login" as never });
   };
 
   const totalCartItems = cart.reduce((acc, item) => acc + item.qty, 0);
-  const totalCartPrice = cart.reduce(
+  const totalCartSubtotal = cart.reduce(
     (acc, item) => acc + item.unitTotal * item.qty,
     0
   );
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] text-[#1C2B22] font-sans relative overflow-x-hidden">
-      {/* STYLE ANIMASI KELOPAK BUNGA & MARQUEE */}
+      {/* ANIMASI KELOPAK BUNGA & HEADER BERJALAN */}
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0%); }
@@ -451,7 +424,7 @@ export default function Index() {
         }
       `}</style>
 
-      {/* EFEK KELOPAK BUNGA BERJATUHAN */}
+      {/* KELOPAK BUNGA JATUH */}
       {[
         { left: "6%", dur: "14s", delay: "0s", size: 16, color: "#E8B4B8" },
         { left: "22%", dur: "18s", delay: "3s", size: 13, color: "#D4A373" },
@@ -469,18 +442,20 @@ export default function Index() {
             animationDelay: p.delay,
           }}
         >
-          <svg
-            width={p.size}
-            height={p.size}
-            viewBox="0 0 24 24"
-            fill={p.color}
-          >
+          <svg width={p.size} height={p.size} viewBox="0 0 24 24" fill={p.color}>
             <path d="M12 2C8 6 4 10 4 15a8 8 0 0016 0c0-5-4-9-8-13z" />
           </svg>
         </div>
       ))}
 
-      {/* 1. HEADER BERJALAN (RUNNING TEXT TOP BAR) */}
+      {/* BANNER JIKA PO TUTUP DARI PENGATURAN ADMIN */}
+      {!settings.storeOpen && (
+        <div className="bg-[#C87A5B] text-white text-center text-xs font-semibold py-2 px-4">
+          Slot Pre-Order Hari Raya sedang penuh sementara. Hubungi WhatsApp kami untuk jadwal pengiriman terdekat.
+        </div>
+      )}
+
+      {/* 1. HEADER BERJALAN (RUNNING BAR) */}
       <div className="bg-[#14452F] text-[#FAF6F0] text-xs py-2 px-4 flex items-center justify-between gap-4 border-b border-[#225C41]">
         <div className="overflow-hidden flex-1">
           <div className="animate-marquee gap-10 whitespace-nowrap">
@@ -502,18 +477,11 @@ export default function Index() {
               onChange={(e) => setCity(e.target.value)}
               className="bg-transparent text-white focus:outline-none cursor-pointer"
             >
-              <option value="Jabodetabek" className="text-black">
-                Jabodetabek
-              </option>
-              <option value="Bandung" className="text-black">
-                Bandung
-              </option>
-              <option value="Surabaya" className="text-black">
-                Surabaya
-              </option>
-              <option value="Luar Pulau" className="text-black">
-                Luar Pulau
-              </option>
+              {CITIES.map((c) => (
+                <option key={c} value={c} className="text-black">
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
           <a
@@ -528,22 +496,20 @@ export default function Index() {
       {/* 2. NAVBAR UTAMA */}
       <header className="sticky top-0 z-30 bg-[#FAF6F0]/95 backdrop-blur-md border-b border-[#E5DDD0] px-4 md:px-10 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Brand Logo */}
-          <a href="#" className="flex items-center gap-2.5 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <div className="w-10 h-10 rounded-xl bg-[#14452F] text-[#FAF6F0] flex items-center justify-center shadow-sm">
               <Gift className="w-5 h-5 text-[#E5C158]" />
             </div>
             <div>
               <span className="font-serif text-xl font-bold tracking-tight text-[#14452F] block leading-none">
-                Kalandra
+                {settings.storeName}
               </span>
               <span className="text-[9px] tracking-[0.2em] text-[#6B705C] uppercase font-medium">
-                Hampers & Seserahan
+                {settings.storeTagline || "Hampers & Seserahan"}
               </span>
             </div>
-          </a>
+          </Link>
 
-          {/* Menu Tengah */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-[#2F3E35]">
             <a href="#flash-sale" className="hover:text-[#14452F] transition">
               Flash Sale
@@ -564,7 +530,6 @@ export default function Index() {
 
           {/* Pencarian + Tombol Kaca Pembesar + Login Admin Kecil + Keranjang */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Search Box dengan Tombol Kaca Pembesar di sampingnya */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -594,18 +559,30 @@ export default function Index() {
               </button>
             </form>
 
-            {/* Tombol Login Admin Kecil */}
-            <button
-              onClick={() => setIsAdminModalOpen(true)}
-              title="Login Admin Toko"
-              className="flex items-center gap-1 text-[11px] font-medium text-[#5C665E] hover:text-[#14452F] bg-white border border-[#DDD4C7] px-2.5 py-1.5 rounded-full transition cursor-pointer"
-            >
-              <Lock className="w-3 h-3" />
-              <span className="hidden sm:inline">Admin</span>
-            </button>
+            {/* Tombol Admin Kecil (Langsung ke /admin jika sudah login admin, atau buka modal login) */}
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] px-3 py-1.5 rounded-full transition"
+              >
+                <LayoutDashboard className="w-3 h-3" />
+                <span>Panel Admin</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAdminModalOpen(true)}
+                title="Login Admin"
+                className="flex items-center gap-1 text-[11px] font-medium text-[#5C665E] hover:text-[#14452F] bg-white border border-[#DDD4C7] px-2.5 py-1.5 rounded-full transition cursor-pointer"
+              >
+                <Lock className="w-3 h-3" />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+            )}
 
             {/* Tombol Keranjang */}
             <button
+              type="button"
               onClick={() => setIsCartOpen(true)}
               className="relative p-2.5 rounded-full bg-[#14452F] text-white hover:bg-[#1C593D] transition cursor-pointer shadow-xs"
               title="Keranjang Belanja"
@@ -623,7 +600,7 @@ export default function Index() {
 
       {/* 3. HERO SLIDER */}
       <section className="relative h-[470px] md:h-[530px] overflow-hidden">
-        {HERO_SLIDES.map((slide, idx) => (
+        {heroSlides.map((slide, idx) => (
           <div
             key={idx}
             className={`absolute inset-0 transition-opacity duration-700 ${
@@ -650,17 +627,11 @@ export default function Index() {
                 {slide.subtitle}
               </p>
 
-              {/* Pill Filter Cepat di Hero */}
               <div className="flex flex-wrap gap-2.5">
-                {[
-                  "Birthday & Anniv",
-                  "Lebaran & Hari Raya",
-                  "Seserahan & Hantaran",
-                  "Baby Born",
-                  "Corporate Parcel",
-                ].map((cat) => (
+                {categories.slice(0, 6).map((cat) => (
                   <button
                     key={cat}
+                    type="button"
                     onClick={() => {
                       setSelectedCategory(cat);
                       document
@@ -677,11 +648,11 @@ export default function Index() {
           </div>
         ))}
 
-        {/* Tombol Navigasi Slider */}
         <button
+          type="button"
           onClick={() =>
             setCurrentSlide(
-              (prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length
+              (prev) => (prev - 1 + heroSlides.length) % heroSlides.length
             )
           }
           className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
@@ -689,19 +660,20 @@ export default function Index() {
           <ChevronLeft className="w-5 h-5" />
         </button>
         <button
+          type="button"
           onClick={() =>
-            setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)
+            setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
           }
           className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
 
-        {/* Dots Indicator */}
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {HERO_SLIDES.map((_, i) => (
+          {heroSlides.map((_, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => setCurrentSlide(i)}
               className={`h-2 rounded-full transition-all cursor-pointer ${
                 i === currentSlide ? "w-7 bg-[#E5C158]" : "w-2 bg-white/50"
@@ -711,94 +683,86 @@ export default function Index() {
         </div>
       </section>
 
-      {/* 4. FLASH SALE SECTION */}
-      <section
-        id="flash-sale"
-        className="max-w-7xl mx-auto px-4 md:px-10 pt-12 pb-6"
-      >
-        <div className="bg-gradient-to-r from-[#14452F] to-[#1E5C40] rounded-3xl p-6 md:p-8 text-white shadow-md">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-2 text-[#E5C158] text-xs font-bold uppercase tracking-wider mb-1">
-                <Sparkles className="w-4 h-4" /> Penawaran Terbatas Hari Ini
+      {/* 4. FLASH SALE */}
+      {flashSaleProducts.length > 0 && (
+        <section
+          id="flash-sale"
+          className="max-w-7xl mx-auto px-4 md:px-10 pt-12 pb-6"
+        >
+          <div className="bg-gradient-to-r from-[#14452F] to-[#1E5C40] rounded-3xl p-6 md:p-8 text-white shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2 text-[#E5C158] text-xs font-bold uppercase tracking-wider mb-1">
+                  <Sparkles className="w-4 h-4" /> Penawaran Terbatas Hari Ini
+                </div>
+                <h2 className="font-serif text-2xl md:text-3xl font-semibold">
+                  Flash Sale Rangkaian Pilihan
+                </h2>
               </div>
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold">
-                Flash Sale Rangkaian Pilihan
-              </h2>
+
+              <div className="flex items-center gap-2.5 bg-black/25 px-4 py-2.5 rounded-2xl border border-white/15 self-start">
+                <Clock className="w-4 h-4 text-[#E5C158]" />
+                <span className="text-xs text-white/80">Berakhir dalam:</span>
+                <div className="flex items-center gap-1 font-mono font-bold text-sm">
+                  <span className="bg-[#C87A5B] px-2 py-0.5 rounded">{hours}</span>
+                  <span>:</span>
+                  <span className="bg-[#C87A5B] px-2 py-0.5 rounded">
+                    {minutes}
+                  </span>
+                  <span>:</span>
+                  <span className="bg-[#C87A5B] px-2 py-0.5 rounded">
+                    {seconds}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Countdown */}
-            <div className="flex items-center gap-2.5 bg-black/25 px-4 py-2.5 rounded-2xl border border-white/15 self-start">
-              <Clock className="w-4 h-4 text-[#E5C158]" />
-              <span className="text-xs text-white/80">Berakhir dalam:</span>
-              <div className="flex items-center gap-1 font-mono font-bold text-sm">
-                <span className="bg-[#C87A5B] px-2 py-0.5 rounded">{hours}</span>
-                <span>:</span>
-                <span className="bg-[#C87A5B] px-2 py-0.5 rounded">
-                  {minutes}
-                </span>
-                <span>:</span>
-                <span className="bg-[#C87A5B] px-2 py-0.5 rounded">
-                  {seconds}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {flashSaleProducts.map((item) => (
-              <div
-                key={item.id}
-                className="bg-[#FAF6F0] text-[#1C2B22] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="relative h-44 overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                    <span className="absolute top-3 left-3 bg-[#C87A5B] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                      HEMAT{" "}
-                      {item.originalPrice
-                        ? Math.round(
-                            ((item.originalPrice - item.price) /
-                              item.originalPrice) *
-                              100
-                          )
-                        : 15}
-                      %
-                    </span>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-serif font-semibold text-base mb-1">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-bold text-[#14452F] text-base">
-                        {formatRupiah(item.price)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {flashSaleProducts.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#FAF6F0] text-[#1C2B22] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="relative h-44 overflow-hidden">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      />
+                      <span className="absolute top-3 left-3 bg-[#C87A5B] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                        PROMO HARI INI
                       </span>
-                      {item.originalPrice && (
-                        <span className="text-xs text-gray-400 line-through">
-                          {formatRupiah(item.originalPrice)}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-serif font-semibold text-base mb-1">
+                        {item.name}
+                      </h3>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-[#14452F] text-base">
+                          {formatIDR(item.price)}
                         </span>
-                      )}
+                        <span className="text-xs text-gray-400 line-through">
+                          {formatIDR(Math.round(item.price * 1.15))}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="px-4 pb-4">
+                    <button
+                      type="button"
+                      onClick={() => openOrderModal(item)}
+                      className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-medium py-2.5 rounded-xl transition cursor-pointer"
+                    >
+                      Ambil Promo & Kustomisasi
+                    </button>
+                  </div>
                 </div>
-                <div className="px-4 pb-4">
-                  <button
-                    onClick={() => openOrderModal(item)}
-                    className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-medium py-2.5 rounded-xl transition cursor-pointer"
-                  >
-                    Ambil Promo & Kustomisasi
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. BELANJA PER MOMEN */}
       <section className="max-w-7xl mx-auto px-4 md:px-10 py-8">
@@ -808,6 +772,7 @@ export default function Index() {
           </h2>
           {selectedMoment !== "Semua" && (
             <button
+              type="button"
               onClick={() => setSelectedMoment("Semua")}
               className="text-xs text-[#C87A5B] font-semibold underline cursor-pointer"
             >
@@ -821,6 +786,7 @@ export default function Index() {
             const active = selectedMoment === m.name;
             return (
               <button
+                type="button"
                 key={m.name}
                 onClick={() => {
                   setSelectedMoment(active ? "Semua" : m.name);
@@ -851,7 +817,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* 6. KATALOG LANGSUNG & FILTER */}
+      {/* 6. KATALOG LANGSUNG & FILTER (TERHUBUNG KE PRODUK ADMIN) */}
       <section id="katalog" className="max-w-7xl mx-auto px-4 md:px-10 py-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
@@ -863,17 +829,10 @@ export default function Index() {
             </h2>
           </div>
 
-          {/* Filter Pills */}
           <div className="flex flex-wrap gap-2">
-            {[
-              "Semua",
-              "Birthday & Anniv",
-              "Lebaran & Hari Raya",
-              "Seserahan & Hantaran",
-              "Baby Born",
-              "Corporate Parcel",
-            ].map((cat) => (
+            {["Semua", ...categories].map((cat) => (
               <button
+                type="button"
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`text-xs px-3.5 py-2 rounded-full border transition cursor-pointer ${
@@ -894,6 +853,7 @@ export default function Index() {
               Produk tidak ditemukan untuk filter/pencarian saat ini.
             </p>
             <button
+              type="button"
               onClick={() => {
                 setSelectedCategory("Semua");
                 setSelectedMoment("Semua");
@@ -907,65 +867,82 @@ export default function Index() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-3xl border border-[#E6DEC8] overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="relative h-60 overflow-hidden bg-[#F2ECE1]">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[#1C2B22] text-[10px] font-semibold px-2.5 py-1 rounded-full">
-                      {product.category}
-                    </span>
-                    <span
-                      className={`absolute top-3 right-3 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                        product.badge === "Slot Terbatas"
-                          ? "bg-[#C87A5B]"
-                          : "bg-[#14452F]"
-                      }`}
-                    >
-                      {product.badge}
-                    </span>
-                    {product.halal && (
-                      <span className="absolute bottom-3 left-3 bg-[#14452F]/90 text-[#E5C158] text-[10px] font-bold px-2.5 py-0.5 rounded-md">
-                        حلال • 100% Halal
-                      </span>
-                    )}
-                  </div>
+            {filteredProducts.map((product) => {
+              const badgeLabel =
+                product.badge ??
+                (product.tags?.includes("express")
+                  ? "Same-Day"
+                  : product.stock <= 5
+                  ? "Slot Terbatas"
+                  : "Ready Stock");
 
-                  <div className="p-5">
-                    <h3 className="font-serif text-lg font-semibold text-[#1C2B22] mb-1.5">
-                      {product.name}
-                    </h3>
-                    <p className="text-xs text-[#5C665E] leading-relaxed mb-4 line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="font-bold text-lg text-[#14452F]">
-                      {formatRupiah(product.price)}
+              return (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-3xl border border-[#E6DEC8] overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="relative h-60 overflow-hidden bg-[#F2ECE1]">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      />
+                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[#1C2B22] text-[10px] font-semibold px-2.5 py-1 rounded-full">
+                        {product.category}
+                      </span>
+                      <span
+                        className={`absolute top-3 right-3 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                          badgeLabel === "Slot Terbatas"
+                            ? "bg-[#C87A5B]"
+                            : "bg-[#14452F]"
+                        }`}
+                      >
+                        {badgeLabel}
+                      </span>
+                      {product.foodStatus !== "non-halal" && (
+                        <span className="absolute bottom-3 left-3 bg-[#14452F]/90 text-[#E5C158] text-[10px] font-bold px-2.5 py-0.5 rounded-md">
+                          حلال • 100% Halal
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="p-5">
+                      <h3 className="font-serif text-lg font-semibold text-[#1C2B22] mb-1.5">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-[#5C665E] leading-relaxed mb-4 line-clamp-2">
+                        {product.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-lg text-[#14452F]">
+                          {formatIDR(product.price)}
+                        </span>
+                        <span className="text-[11px] text-[#6B705C]">
+                          Stok: {product.stock}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="px-5 pb-5">
-                  <button
-                    onClick={() => openOrderModal(product)}
-                    className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold py-3 rounded-xl transition cursor-pointer"
-                  >
-                    Kustomisasi & Pesan
-                  </button>
+                  <div className="px-5 pb-5">
+                    <button
+                      type="button"
+                      disabled={product.stock <= 0}
+                      onClick={() => openOrderModal(product)}
+                      className="w-full bg-[#14452F] hover:bg-[#1D5B3F] disabled:bg-gray-300 text-white text-xs font-semibold py-3 rounded-xl transition cursor-pointer"
+                    >
+                      {product.stock > 0 ? "Kustomisasi & Pesan" : "Stok Habis"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* 7. LAYANAN SPESIAL SESERAHAN & HANTARAN */}
+      {/* 7. LAYANAN SPESIAL SESERAHAN */}
       <section
         id="seserahan"
         className="max-w-7xl mx-auto px-4 md:px-10 py-10"
@@ -1017,7 +994,10 @@ export default function Index() {
             </div>
 
             <a
-              href="https://wa.me/6281234567890?text=Halo%20Kalandra,%20saya%20mau%20konsultasi%20paket%20Seserahan%20Pernikahan"
+              href={waLink(
+                settings.whatsappNumber,
+                `Halo ${settings.storeName}, saya mau konsultasi paket Seserahan Pernikahan`
+              )}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold px-6 py-3.5 rounded-xl transition self-start"
@@ -1028,14 +1008,14 @@ export default function Index() {
         </div>
       </section>
 
-      {/* 8. TUTORIAL CARA PEMESANAN */}
+      {/* 8. TUTORIAL PEMESANAN */}
       <section id="cara-pesan" className="max-w-7xl mx-auto px-4 md:px-10 py-10">
         <div className="text-center max-w-xl mx-auto mb-8">
           <span className="text-xs uppercase tracking-widest text-[#C87A5B] font-bold">
             Panduan Praktis
           </span>
           <h2 className="font-serif text-2xl md:text-3xl font-semibold text-[#14452F] mt-1">
-            4 Langkah Mudah Memesan di Kalandra
+            4 Langkah Mudah Memesan di {settings.storeName}
           </h2>
         </div>
 
@@ -1105,7 +1085,6 @@ export default function Index() {
           </p>
         </div>
 
-        {/* Testimoni Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
           {[
             {
@@ -1143,7 +1122,6 @@ export default function Index() {
           ))}
         </div>
 
-        {/* Banner Jaminan 100% Halal */}
         <div className="bg-[#F3ECE0] border border-[#DFD4C0] rounded-3xl p-8 text-center max-w-3xl mx-auto">
           <div className="w-14 h-14 rounded-full bg-[#14452F] text-[#E5C158] flex items-center justify-center mx-auto mb-3 shadow-sm">
             <ShieldCheck className="w-7 h-7" />
@@ -1152,24 +1130,22 @@ export default function Index() {
             Jaminan 100% Halal & Tanpa Alkohol
           </h3>
           <p className="text-xs md:text-sm text-[#4A554E] leading-relaxed">
-            Semua parsel & makanan dari Kalandra terkurasi aman, tanpa produk
-            non-halal — bebas liquor, wine, dan bahan terlarang — demi
-            kenyamanan & berkah ibadah Anda.
+            Semua parsel & makanan dari {settings.storeName} terkurasi aman,
+            tanpa produk non-halal — bebas liquor, wine, dan bahan terlarang —
+            demi kenyamanan & berkah ibadah Anda.
           </p>
         </div>
       </section>
 
-      {/* 10. ARTIKEL & INSPIRASI */}
+      {/* 10. ARTIKEL */}
       <section id="artikel" className="max-w-7xl mx-auto px-4 md:px-10 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <span className="text-xs uppercase tracking-widest text-[#C87A5B] font-bold">
-              Jurnal Kalandra
-            </span>
-            <h2 className="font-serif text-2xl md:text-3xl font-semibold text-[#14452F]">
-              Artikel & Tips Merangkai Momen
-            </h2>
-          </div>
+        <div className="mb-6">
+          <span className="text-xs uppercase tracking-widest text-[#C87A5B] font-bold">
+            Jurnal {settings.storeName}
+          </span>
+          <h2 className="font-serif text-2xl md:text-3xl font-semibold text-[#14452F]">
+            Artikel & Tips Merangkai Momen
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1202,20 +1178,22 @@ export default function Index() {
       {/* 11. FOOTER LENGKAP */}
       <footer className="bg-[#14452F] text-[#FAF6F0] mt-12 pt-14 pb-8 px-4 md:px-10">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-white/15">
-          <div className="md:col-span-1">
+          <div>
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
                 <Gift className="w-5 h-5 text-[#E5C158]" />
               </div>
-              <span className="font-serif text-xl font-bold">Kalandra</span>
+              <span className="font-serif text-xl font-bold">
+                {settings.storeName}
+              </span>
             </div>
             <p className="text-xs text-white/75 leading-relaxed mb-4">
-              Spesialis hampers eksklusif, parsel hari raya 100% halal, dan
-              seserahan pernikahan dengan sentuhan personal.
+              {settings.footerDescription ||
+                "Spesialis hampers eksklusif, parsel hari raya 100% halal, dan seserahan pernikahan dengan sentuhan personal."}
             </p>
             <div className="flex gap-3">
               <a
-                href="https://instagram.com"
+                href={settings.instagramUrl || "https://instagram.com"}
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
@@ -1223,7 +1201,7 @@ export default function Index() {
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href="https://wa.me/6281234567890"
+                href={waLink(settings.whatsappNumber, "Halo Kalandra!")}
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
@@ -1238,26 +1216,17 @@ export default function Index() {
               Kategori Populer
             </h4>
             <ul className="space-y-2 text-xs text-white/80">
-              <li>
-                <a href="#katalog" className="hover:text-white">
-                  Birthday & Anniversary
-                </a>
-              </li>
-              <li>
-                <a href="#katalog" className="hover:text-white">
-                  Parsel Lebaran & Hari Raya
-                </a>
-              </li>
-              <li>
-                <a href="#seserahan" className="hover:text-white">
-                  Seserahan Akrilik & Mahar
-                </a>
-              </li>
-              <li>
-                <a href="#katalog" className="hover:text-white">
-                  Corporate & VIP Gift
-                </a>
-              </li>
+              {categories.slice(0, 4).map((c) => (
+                <li key={c}>
+                  <a
+                    href="#katalog"
+                    onClick={() => setSelectedCategory(c)}
+                    className="hover:text-white"
+                  >
+                    {c}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -1283,7 +1252,12 @@ export default function Index() {
               </li>
               <li>
                 <button
-                  onClick={() => setIsAdminModalOpen(true)}
+                  type="button"
+                  onClick={() =>
+                    isAdmin
+                      ? navigate({ to: "/admin" })
+                      : setIsAdminModalOpen(true)
+                  }
                   className="hover:text-white cursor-pointer"
                 >
                   Portal Admin
@@ -1297,23 +1271,28 @@ export default function Index() {
               Workshop & Pengiriman
             </h4>
             <p className="text-xs text-white/80 leading-relaxed mb-2">
-              Buka Setiap Hari: 08.00 – 20.00 WIB
+              {settings.operatingHours || "Buka Setiap Hari: 08.00 – 20.00 WIB"}
             </p>
             <p className="text-xs text-white/80 leading-relaxed">
-              Same-Day Delivery untuk area Jabodetabek, Bandung & Surabaya.
+              Same-Day Delivery untuk area {CITIES.join(", ")}.
             </p>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-white/60 gap-2">
-          <span>© 2026 Kalandra Hampers & Seserahan. All rights reserved.</span>
+          <span>
+            © 2026 {settings.storeName}. All rights reserved.
+          </span>
           <span>100% Halal Curated Gifts</span>
         </div>
       </footer>
 
       {/* FLOATING WHATSAPP BUTTON */}
       <a
-        href="https://wa.me/6281234567890?text=Halo%20Kalandra,%20saya%20mau%20tanya%20stok%20dan%20ongkir"
+        href={waLink(
+          settings.whatsappNumber,
+          `Halo ${settings.storeName}, saya mau tanya stok dan ongkir`
+        )}
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-5 right-5 z-30 bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold px-4 py-3 rounded-full shadow-lg flex items-center gap-2 border border-white/20"
@@ -1322,9 +1301,7 @@ export default function Index() {
         Tanya Stok & Ongkir
       </a>
 
-      {/* =========================================================
-          POP-UP PEMESANAN LENGKAP + LIVE PREVIEW KARTU UCAPAN
-         ========================================================= */}
+      {/* POP-UP PEMESANAN LENGKAP + PRATINJAU KARTU */}
       {orderProduct && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#FAF6F0] rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-[#DFD4C0] my-8">
@@ -1334,10 +1311,11 @@ export default function Index() {
                   {orderProduct.name}
                 </h3>
                 <p className="text-xs text-[#6B705C]">
-                  {orderProduct.category} • {formatRupiah(orderProduct.price)}
+                  {orderProduct.category} • {formatIDR(orderProduct.price)}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setOrderProduct(null)}
                 className="p-2 rounded-full hover:bg-gray-100 cursor-pointer"
               >
@@ -1346,7 +1324,6 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 max-h-[80vh] overflow-y-auto">
-              {/* Kolom Kiri: Form Kustomisasi */}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1358,7 +1335,7 @@ export default function Index() {
                       value={cardTo}
                       onChange={(e) => setCardTo(e.target.value)}
                       placeholder="Ibu Ratna"
-                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#14452F]"
+                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
                     />
                   </div>
                   <div>
@@ -1370,7 +1347,7 @@ export default function Index() {
                       value={cardFrom}
                       onChange={(e) => setCardFrom(e.target.value)}
                       placeholder="Sari & Keluarga"
-                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#14452F]"
+                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
                     />
                   </div>
                 </div>
@@ -1388,23 +1365,22 @@ export default function Index() {
                     value={cardMessage}
                     onChange={(e) => setCardMessage(e.target.value)}
                     placeholder="Selamat ulang tahun, semoga sehat dan bahagia selalu..."
-                    className="w-full bg-white border border-[#D8CFC0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#14452F]"
+                    className="w-full bg-white border border-[#D8CFC0] rounded-xl p-3 text-xs"
                   />
                 </div>
 
-                {/* Warna Pita */}
                 <div>
                   <label className="block text-xs font-semibold mb-1.5">
                     Warna Pita
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {RIBBON_COLORS.map((r) => (
+                    {RIBBON_OPTIONS.map((r) => (
                       <button
                         type="button"
-                        key={r.name}
-                        onClick={() => setRibbonColor(r.name)}
+                        key={r.id}
+                        onClick={() => setRibbonColor(r.id)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer ${
-                          ribbonColor === r.name
+                          ribbonColor === r.id
                             ? "border-[#14452F] bg-white font-semibold shadow-2xs"
                             : "border-[#E0D7C8] bg-white/60"
                         }`}
@@ -1419,20 +1395,17 @@ export default function Index() {
                   </div>
                 </div>
 
-                {/* Tanggal & Jumlah */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold mb-1">
                       Tanggal Pengiriman
                     </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={deliveryDate}
-                        onChange={(e) => setDeliveryDate(e.target.value)}
-                        className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
-                      />
-                    </div>
+                    <input
+                      type="date"
+                      value={deliveryDate}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
+                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1">
@@ -1460,13 +1433,52 @@ export default function Index() {
                   </div>
                 </div>
 
-                {/* Add-ons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">
+                      Nama Pemesan (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Nama Anda"
+                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">
+                      No. WhatsApp (Opsional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="0812xxxxxxxx"
+                      className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">
+                    Alamat Pengiriman (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="Jalan, nomor rumah/gedung, patokan..."
+                    className="w-full bg-white border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold mb-1.5">
                     Add-ons Tambahan
                   </label>
                   <div className="space-y-2">
-                    {ADD_ONS.map((addon) => {
+                    {ADDONS.map((addon) => {
                       const checked = selectedAddons.includes(addon.id);
                       return (
                         <button
@@ -1485,10 +1497,10 @@ export default function Index() {
                                 checked ? "text-[#14452F]" : "text-gray-300"
                               }`}
                             />
-                            {addon.name}
+                            {addon.label}
                           </span>
                           <span className="text-[#14452F] font-semibold">
-                            +{formatRupiah(addon.price)}
+                            +{formatIDR(addon.price)}
                           </span>
                         </button>
                       );
@@ -1497,7 +1509,6 @@ export default function Index() {
                 </div>
               </div>
 
-              {/* Kolom Kanan: Pratinjau Kartu Ucapan + Checkout */}
               <div className="flex flex-col justify-between space-y-4">
                 <div>
                   <span className="block text-[11px] font-bold uppercase tracking-widest text-[#6B705C] mb-2">
@@ -1508,7 +1519,7 @@ export default function Index() {
                       className="h-2.5 w-full absolute top-0 left-0"
                       style={{
                         backgroundColor:
-                          RIBBON_COLORS.find((r) => r.name === ribbonColor)
+                          RIBBON_OPTIONS.find((r) => r.id === ribbonColor)
                             ?.hex || "#14452F",
                       }}
                     />
@@ -1528,7 +1539,11 @@ export default function Index() {
                       {cardFrom || "Nama Pengirim"}
                     </p>
                     <p className="text-[9px] tracking-[0.18em] text-gray-400 uppercase mt-5">
-                      KALANDRA • PITA {ribbonColor.toUpperCase()}
+                      {settings.storeName.toUpperCase()} • PITA{" "}
+                      {(
+                        RIBBON_OPTIONS.find((r) => r.id === ribbonColor)?.name ||
+                        ribbonColor
+                      ).toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -1539,11 +1554,12 @@ export default function Index() {
                       Total ({orderQty}x)
                     </span>
                     <span className="font-serif text-xl font-bold text-[#14452F]">
-                      {formatRupiah(currentModalUnitPrice * orderQty)}
+                      {formatIDR(currentModalUnitPrice * orderQty)}
                     </span>
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleAddToCart}
                     className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
                   >
@@ -1551,6 +1567,7 @@ export default function Index() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={handleDirectWhatsApp}
                     className="w-full border border-[#14452F] text-[#14452F] hover:bg-[#14452F]/5 text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
                   >
@@ -1564,9 +1581,7 @@ export default function Index() {
         </div>
       )}
 
-      {/* =========================================================
-          DRAWER KERANJANG BELANJA
-         ========================================================= */}
+      {/* DRAWER KERANJANG */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end">
           <div className="bg-[#FAF6F0] w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
@@ -1578,6 +1593,7 @@ export default function Index() {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCartOpen(false)}
                 className="p-1.5 rounded-full hover:bg-gray-100 cursor-pointer"
               >
@@ -1607,6 +1623,7 @@ export default function Index() {
                           {item.product.name}
                         </h4>
                         <button
+                          type="button"
                           onClick={() =>
                             setCart((prev) =>
                               prev.filter((c) => c.key !== item.key)
@@ -1618,14 +1635,11 @@ export default function Index() {
                         </button>
                       </div>
                       <p className="text-[11px] text-[#6B705C]">
-                        Pita: {item.ribbon} • Kirim: {item.deliveryDate}
-                      </p>
-                      <p className="text-[11px] text-[#6B705C]">
-                        Untuk: {item.to}
+                        Untuk: {item.to} • Kirim: {item.deliveryDate}
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-xs font-bold text-[#14452F]">
-                          {formatRupiah(item.unitTotal * item.qty)}
+                          {formatIDR(item.unitTotal * item.qty)}
                         </span>
                         <span className="text-xs text-gray-500">
                           Qty: {item.qty}
@@ -1640,12 +1654,15 @@ export default function Index() {
             {cart.length > 0 && (
               <div className="p-5 bg-white border-t border-[#E5DDD0] space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#6B705C]">Total Belanja</span>
+                  <span className="text-xs text-[#6B705C]">
+                    Subtotal ({city})
+                  </span>
                   <span className="font-serif text-xl font-bold text-[#14452F]">
-                    {formatRupiah(totalCartPrice)}
+                    {formatIDR(totalCartSubtotal)}
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={handleCartCheckoutWA}
                   className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                 >
@@ -1657,35 +1674,33 @@ export default function Index() {
         </div>
       )}
 
-      {/* =========================================================
-          MODAL LOGIN ADMIN KECIL (TIDAK MENGGANGGU PEMBELI)
-         ========================================================= */}
+      {/* MODAL LOGIN ADMIN KECIL */}
       {isAdminModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-xs w-full p-6 shadow-xl border border-[#E5DDD0]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-serif text-lg font-semibold text-[#14452F]">
-                Login Admin
+                Portal Admin
               </h3>
               <button
+                type="button"
                 onClick={() => setIsAdminModalOpen(false)}
                 className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleAdminSubmit} className="space-y-3">
+            <form onSubmit={handleAdminLoginSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium mb-1">
-                  Username
+                  Email Admin
                 </label>
                 <input
-                  type="text"
-                  value={adminUser}
-                  onChange={(e) => setAdminUser(e.target.value)}
-                  placeholder="admin"
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@kalandra.id"
                   className="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs"
-                  required
                 />
               </div>
               <div>
@@ -1698,17 +1713,13 @@ export default function Index() {
                   onChange={(e) => setAdminPass(e.target.value)}
                   placeholder="••••••••"
                   className="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs"
-                  required
                 />
               </div>
-              {adminError && (
-                <p className="text-[11px] text-red-600">{adminError}</p>
-              )}
               <button
                 type="submit"
                 className="w-full bg-[#14452F] text-white text-xs font-semibold py-2.5 rounded-xl cursor-pointer"
               >
-                Masuk Dashboard Admin
+                Masuk ke Admin Panel
               </button>
             </form>
           </div>
