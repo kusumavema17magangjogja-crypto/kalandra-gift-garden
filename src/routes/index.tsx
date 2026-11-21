@@ -13,7 +13,6 @@ import {
   X,
   Plus,
   Minus,
-  Trash2,
   MessageCircle,
   MapPin,
   ShieldCheck,
@@ -35,6 +34,8 @@ import {
   addonsTotal,
   formatIDR,
   waLink,
+  type CartItem,
+  type Order,
   type Product,
   type RibbonColor,
 } from "@/lib/data";
@@ -95,27 +96,25 @@ const ARTICLES = [
   },
 ];
 
-interface LocalCartItem {
-  key: string;
-  product: Product;
-  to: string;
-  from: string;
-  message: string;
-  ribbon: RibbonColor;
-  deliveryDate: string;
-  qty: number;
-  addons: string[];
-  unitTotal: number;
-}
-
 function HomePage() {
   const navigate = useNavigate();
-  const store = useStore();
-  const { products, categories, settings, isAdmin } = store;
-  const anyStore = store as unknown as Record<string, unknown>;
+  const {
+    products,
+    categories,
+    settings,
+    city,
+    setCity,
+    cartCount,
+    setCartOpen,
+    addToCart,
+    recordOrder,
+    isAdmin,
+    loginAdmin,
+    user,
+    logout,
+  } = useStore();
 
   // --- STATE UI ---
-  const [city, setCity] = useState<string>(CITIES[0] || "Jabodetabek");
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
@@ -141,10 +140,6 @@ function HomePage() {
   });
   const [orderQty, setOrderQty] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-
-  // Keranjang Belanja Lokal (tetap tersedia jika store tidak punya drawer sendiri)
-  const [cart, setCart] = useState<LocalCartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Modal Login Admin Kecil
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -235,7 +230,7 @@ function HomePage() {
   const openOrderModal = (product: Product) => {
     setOrderProduct(product);
     setCardTo("");
-    setCardFrom("");
+    setCardFrom(user?.name || "");
     setCardMessage("");
     setRibbonColor("emerald");
     setOrderQty(1);
@@ -253,97 +248,74 @@ function HomePage() {
     return orderProduct.price + addonsTotal(selectedAddons);
   }, [orderProduct, selectedAddons]);
 
-  const handleOpenCart = () => {
-    if (typeof anyStore.setCartOpen === "function") {
-      (anyStore.setCartOpen as (open: boolean) => void)(true);
-      return;
-    }
-    setIsCartOpen(true);
-  };
+  const buildCartItem = (product: Product): CartItem => ({
+    key: `${product.id}-${Date.now()}`,
+    productId: product.id,
+    name: product.name,
+    image: product.image,
+    basePrice: product.price,
+    qty: orderQty,
+    addons: selectedAddons,
+    ribbon: ribbonColor,
+    cardTemplate: "classic",
+    to: cardTo.trim() || "Penerima",
+    from: cardFrom.trim() || customerName.trim() || "Pengirim",
+    message: cardMessage.trim() || "Semoga berkenan dan membawa kebahagiaan.",
+    deliveryDate: new Date(deliveryDate).toISOString(),
+  });
 
   const handleAddToCart = () => {
     if (!orderProduct) return;
-
-    if (typeof anyStore.addToCart === "function") {
-      try {
-        (anyStore.addToCart as (payload: unknown) => void)({
-          product: orderProduct,
-          qty: orderQty,
-          addons: selectedAddons,
-          ribbon: ribbonColor,
-          to: cardTo || "Penerima",
-          from: cardFrom || "Pengirim",
-          message: cardMessage || "Semoga berkenan dan membawa kebahagiaan.",
-          deliveryDate,
-        });
-        setOrderProduct(null);
-        handleOpenCart();
-        toast.success(`${orderProduct.name} ditambahkan ke keranjang`);
-        return;
-      } catch {
-        // Fallback ke keranjang lokal di bawah
-      }
+    if (isAdmin) {
+      toast.info("Mode Admin aktif: gunakan tombol Pesan via WA atau keluar dari mode Admin untuk tes keranjang pembeli.");
+      return;
     }
 
-    const newItem: LocalCartItem = {
-      key: `${orderProduct.id}-${Date.now()}`,
-      product: orderProduct,
-      to: cardTo || "Penerima",
-      from: cardFrom || "Pengirim",
-      message: cardMessage || "Semoga berkenan dan membawa kebahagiaan.",
-      ribbon: ribbonColor,
-      deliveryDate,
-      qty: orderQty,
-      addons: selectedAddons,
-      unitTotal: currentModalUnitPrice,
-    };
+    const item = buildCartItem(orderProduct);
+    const err = addToCart(item);
+    if (err) {
+      toast.error(err);
+      return;
+    }
 
-    setCart((prev) => [...prev, newItem]);
     setOrderProduct(null);
-    setIsCartOpen(true);
+    setCartOpen(true);
     toast.success(`${orderProduct.name} ditambahkan ke keranjang`);
   };
 
   const handleDirectWhatsApp = () => {
     if (!orderProduct) return;
+    const item = buildCartItem(orderProduct);
     const addonLabels = selectedAddons
       .map((id) => ADDONS.find((a) => a.id === id)?.label)
       .filter(Boolean);
-    const total = currentModalUnitPrice * orderQty;
+    const subtotal = currentModalUnitPrice * orderQty;
+    const shipping = SHIPPING_FEE[city] ?? 30000;
+    const grandTotal = subtotal + shipping;
     const ribbonName =
       RIBBON_OPTIONS.find((r) => r.id === ribbonColor)?.name || ribbonColor;
 
-    if (typeof anyStore.placeOrder === "function") {
-      try {
-        (anyStore.placeOrder as (payload: unknown) => void)({
-          customerName: customerName || cardFrom || "Pelanggan Web",
-          phone: customerPhone || "-",
-          city,
-          address: customerAddress || "-",
-          deliveryDate: new Date(deliveryDate).toISOString(),
-          items: [
-            {
-              key: `item-${Date.now()}`,
-              productId: orderProduct.id,
-              name: orderProduct.name,
-              image: orderProduct.image,
-              basePrice: orderProduct.price,
-              qty: orderQty,
-              addons: selectedAddons,
-              ribbon: ribbonColor,
-              to: cardTo || "Penerima",
-              from: cardFrom || "Pengirim",
-              message: cardMessage || "-",
-            },
-          ],
-        });
-      } catch {
-        // Tetap lanjut buka WA
-      }
-    }
+    // Catat langsung ke daftar pesanan Admin
+    const newOrder: Order = {
+      id: "KLD-" + Math.floor(100000 + Math.random() * 900000),
+      customerName: customerName.trim() || cardFrom.trim() || "Pelanggan Web",
+      customerEmail: user?.email || "guest@kalandra.id",
+      phone: customerPhone.trim() || "-",
+      city,
+      address: customerAddress.trim() || "-",
+      items: [item],
+      subtotal,
+      shipping,
+      total: grandTotal,
+      status: "Menunggu Pembayaran",
+      createdAt: new Date().toISOString(),
+      deliveryDate: new Date(deliveryDate).toISOString(),
+    };
+    recordOrder(newOrder);
 
     const text = [
       `Halo ${settings.storeName}! Saya mau pesan:`,
+      `• No. Order: *${newOrder.id}*`,
       `• Produk: *${orderProduct.name}* (${orderQty}x)`,
       `• Kota Tujuan: ${city}`,
       customerAddress ? `• Alamat: ${customerAddress}` : null,
@@ -352,69 +324,31 @@ function HomePage() {
       `• Add-ons: ${addonLabels.length ? addonLabels.join(", ") : "-"}`,
       `• Kartu Ucapan -> Untuk: ${cardTo || "-"} | Dari: ${cardFrom || "-"}`,
       `• Pesan: "${cardMessage || "-"}"`,
-      `• Total Estimasi: *${formatIDR(total)}*`,
+      `• Subtotal: ${formatIDR(subtotal)}`,
+      `• Ongkir (${city}): ${formatIDR(shipping)}`,
+      `• Total Estimasi: *${formatIDR(grandTotal)}*`,
     ]
       .filter(Boolean)
       .join("\n");
 
-    window.open(waLink(settings.whatsappNumber, text), "_blank", "noreferrer");
-  };
-
-  const handleCartCheckoutWA = () => {
-    if (cart.length === 0) return;
-    const shipping = SHIPPING_FEE[city] ?? 30000;
-    const subtotal = cart.reduce((sum, item) => sum + item.unitTotal * item.qty, 0);
-    const grandTotal = subtotal + shipping;
-
-    const lines = cart.map((item, idx) => {
-      const rName =
-        RIBBON_OPTIONS.find((r) => r.id === item.ribbon)?.name || item.ribbon;
-      return `${idx + 1}. *${item.product.name}* (${item.qty}x) — Pita: ${rName}, Kirim: ${item.deliveryDate}, Untuk: ${item.to} (${formatIDR(item.unitTotal * item.qty)})`;
-    });
-
-    const text = [
-      `Halo ${settings.storeName}! Saya ingin checkout keranjang:`,
-      ``,
-      ...lines,
-      ``,
-      `Subtotal: ${formatIDR(subtotal)}`,
-      `Ongkir (${city}): ${formatIDR(shipping)}`,
-      `*TOTAL: ${formatIDR(grandTotal)}*`,
-    ].join("\n");
-
+    setOrderProduct(null);
+    toast.success(`Pesanan ${newOrder.id} tercatat! Mengarahkan ke WhatsApp...`);
     window.open(waLink(settings.whatsappNumber, text), "_blank", "noreferrer");
   };
 
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (typeof anyStore.login === "function") {
-      const ok = (anyStore.login as (email: string, pass?: string) => boolean)(
-        adminEmail.trim() || "admin@kalandra.id",
-        adminPass
-      );
-      if (ok !== false) {
-        setIsAdminModalOpen(false);
-        toast.success("Berhasil masuk ke Admin Panel");
-        navigate({ to: "/admin" });
-        return;
-      }
+    const err = loginAdmin(adminEmail.trim(), adminPass);
+    if (err) {
+      toast.error(err);
+      return;
     }
     setIsAdminModalOpen(false);
-    navigate({ to: "/login" as never });
+    setAdminEmail("");
+    setAdminPass("");
+    toast.success("Berhasil masuk ke Admin Panel");
+    navigate({ to: "/admin" });
   };
-
-  const storeCartItems = Array.isArray(anyStore.cart)
-    ? (anyStore.cart as Array<{ qty?: number }>)
-    : null;
-
-  const totalCartItems = storeCartItems
-    ? storeCartItems.reduce((acc, item) => acc + (item.qty || 1), 0)
-    : cart.reduce((acc, item) => acc + item.qty, 0);
-
-  const totalCartSubtotal = cart.reduce(
-    (acc, item) => acc + item.unitTotal * item.qty,
-    0
-  );
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] text-[#1C2B22] font-sans relative overflow-x-hidden">
@@ -525,7 +459,7 @@ function HomePage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <button
             type="button"
-            onClick={() => navigate({ to: "/" })}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center gap-2.5 shrink-0 cursor-pointer text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-[#14452F] text-[#FAF6F0] flex items-center justify-center shadow-sm">
@@ -591,14 +525,27 @@ function HomePage() {
             </form>
 
             {isAdmin ? (
-              <button
-                type="button"
-                onClick={() => navigate({ to: "/admin" })}
-                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] px-3 py-1.5 rounded-full transition cursor-pointer"
-              >
-                <LayoutDashboard className="w-3 h-3" />
-                <span>Panel Admin</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => navigate({ to: "/admin" })}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] hover:bg-[#1D5B3F] px-3 py-1.5 rounded-full transition cursor-pointer"
+                >
+                  <LayoutDashboard className="w-3 h-3" />
+                  <span>Panel Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    toast.success("Keluar dari mode Admin");
+                  }}
+                  title="Keluar Mode Admin"
+                  className="text-[11px] text-[#5C665E] hover:text-red-600 bg-white border border-[#DDD4C7] px-2 py-1.5 rounded-full cursor-pointer"
+                >
+                  Keluar
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -613,14 +560,20 @@ function HomePage() {
 
             <button
               type="button"
-              onClick={handleOpenCart}
+              onClick={() => {
+                if (isAdmin) {
+                  toast.info("Admin tidak memiliki keranjang belanja.");
+                  return;
+                }
+                setCartOpen(true);
+              }}
               className="relative p-2.5 rounded-full bg-[#14452F] text-white hover:bg-[#1C593D] transition cursor-pointer shadow-xs"
               title="Keranjang Belanja"
             >
               <ShoppingBag className="w-4 h-4" />
-              {totalCartItems > 0 && (
+              {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-[#C87A5B] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#FAF6F0]">
-                  {totalCartItems}
+                  {cartCount}
                 </span>
               )}
             </button>
@@ -1465,7 +1418,7 @@ function HomePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold mb-1">
-                      Nama Pemesan (Opsional)
+                      Nama Pemesan
                     </label>
                     <input
                       type="text"
@@ -1477,7 +1430,7 @@ function HomePage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1">
-                      No. WhatsApp (Opsional)
+                      No. WhatsApp
                     </label>
                     <input
                       type="tel"
@@ -1491,7 +1444,7 @@ function HomePage() {
 
                 <div>
                   <label className="block text-xs font-semibold mb-1">
-                    Alamat Pengiriman (Opsional)
+                    Alamat Pengiriman
                   </label>
                   <input
                     type="text"
@@ -1610,99 +1563,6 @@ function HomePage() {
         </div>
       )}
 
-      {/* DRAWER KERANJANG LOKAL (FALLBACK) */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end">
-          <div className="bg-[#FAF6F0] w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
-            <div className="p-5 bg-white border-b border-[#E5DDD0] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-[#14452F]" />
-                <h3 className="font-serif text-lg font-semibold text-[#14452F]">
-                  Keranjang Belanja ({totalCartItems})
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCartOpen(false)}
-                className="p-1.5 rounded-full hover:bg-gray-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
-              {cart.length === 0 ? (
-                <div className="text-center py-16 text-gray-400 text-xs">
-                  Keranjang masih kosong. Yuk pilih hampers favoritmu!
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <div
-                    key={item.key}
-                    className="bg-white p-4 rounded-2xl border border-[#E5DDD0] flex gap-3"
-                  >
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="w-16 h-16 rounded-xl object-cover shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-serif font-semibold text-sm truncate">
-                          {item.product.name}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCart((prev) =>
-                              prev.filter((c) => c.key !== item.key)
-                            )
-                          }
-                          className="text-gray-400 hover:text-red-500 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-[#6B705C]">
-                        Untuk: {item.to} • Kirim: {item.deliveryDate}
-                      </p>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs font-bold text-[#14452F]">
-                          {formatIDR(item.unitTotal * item.qty)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Qty: {item.qty}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {cart.length > 0 && (
-              <div className="p-5 bg-white border-t border-[#E5DDD0] space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#6B705C]">
-                    Subtotal ({city})
-                  </span>
-                  <span className="font-serif text-xl font-bold text-[#14452F]">
-                    {formatIDR(totalCartSubtotal)}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCartCheckoutWA}
-                  className="w-full bg-[#14452F] hover:bg-[#1D5B3F] text-white text-xs font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4" /> Checkout via WhatsApp
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* MODAL LOGIN ADMIN KECIL */}
       {isAdminModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
@@ -1726,6 +1586,7 @@ function HomePage() {
                 </label>
                 <input
                   type="email"
+                  required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="admin@kalandra.id"
@@ -1738,6 +1599,7 @@ function HomePage() {
                 </label>
                 <input
                   type="password"
+                  required
                   value={adminPass}
                   onChange={(e) => setAdminPass(e.target.value)}
                   placeholder="••••••••"
