@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -395,7 +395,7 @@ function SidebarNav({
           onClick={() => onSelect(m.id)}
           title={m.headerTitle}
           className={cn(
-            "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition",
+            "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition",
             compact ? "justify-center px-0" : "justify-start",
             view === m.id
               ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-xs"
@@ -426,6 +426,16 @@ function Admin() {
       navigate({ to: "/", replace: true });
     }
   }, [isAdmin, loaded, navigate]);
+
+  const handleBackToStore = () => {
+    setNotifOpen(false);
+    setMobile(false);
+    try {
+      navigate({ to: "/" });
+    } catch {
+      window.location.assign("/");
+    }
+  };
 
   const pendingOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];
@@ -469,7 +479,7 @@ function Admin() {
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="mt-auto flex items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          className="mt-auto flex cursor-pointer items-center justify-center gap-2 border-t border-sidebar-border p-3 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
           aria-label="Ciutkan sidebar"
         >
           <ChevronLeft className={cn("h-4 w-4 transition", collapsed && "rotate-180")} />
@@ -493,7 +503,14 @@ function Admin() {
       </Sheet>
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-6">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobile(true)} aria-label="Menu">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobile(true)}
+            aria-label="Menu"
+          >
             <Menu />
           </Button>
           <h1 className="font-serif text-2xl text-primary">
@@ -502,7 +519,13 @@ function Admin() {
           <div className="ml-auto flex items-center gap-3">
             <Popover open={notifOpen} onOpenChange={setNotifOpen}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative" aria-label="Notifikasi Pesanan Baru">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  aria-label="Notifikasi Pesanan Baru"
+                >
                   <Bell className="h-5 w-5" />
                   {unread > 0 && (
                     <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
@@ -553,6 +576,7 @@ function Admin() {
                           </span>
                           <div className="flex items-center gap-1.5">
                             <Button
+                              type="button"
                               size="sm"
                               variant="outline"
                               className="h-7 px-2 text-[11px]"
@@ -597,6 +621,7 @@ function Admin() {
 
                 <div className="border-t bg-muted/30 p-2">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     className="w-full text-xs text-primary"
@@ -617,11 +642,16 @@ function Admin() {
               </span>
               <span className="text-sm font-medium">Admin {settings.storeName}</span>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">
-                <Store className="mr-1.5 h-4 w-4" />
-                Kembali ke Toko
-              </Link>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBackToStore}
+              className="relative z-40 shrink-0 cursor-pointer pointer-events-auto border-[#C87A5B]/50 bg-[#C87A5B]/15 text-[#8F4A30] hover:bg-[#C87A5B]/25"
+            >
+              <Store className="mr-1.5 h-4 w-4" />
+              Kembali ke Toko
             </Button>
           </div>
         </header>
@@ -751,11 +781,12 @@ function Overview({ go }: { go: (v: View) => void }) {
         </Panel>
         <Panel className="space-y-3">
           <h2 className="font-serif text-xl text-primary">Aksi Cepat</h2>
-          <Button className="w-full justify-start" onClick={() => go("products")}>
+          <Button type="button" className="w-full justify-start" onClick={() => go("products")}>
             <Plus className="mr-2 h-4 w-4" />
             Tambah Produk Baru
           </Button>
           <Button
+            type="button"
             variant="outline"
             className="w-full justify-start"
             onClick={() => downloadCSV(visibleOrders)}
@@ -764,6 +795,7 @@ function Overview({ go }: { go: (v: View) => void }) {
             Download Laporan CSV
           </Button>
           <Button
+            type="button"
             variant="outline"
             className="w-full justify-start border-accent text-accent hover:bg-accent/10 hover:text-accent"
             onClick={() => go("orders")}
@@ -1318,10 +1350,12 @@ function Orders() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOrder(null)}>
+            <Button type="button" variant="outline" onClick={() => setEditOrder(null)}>
               Batal
             </Button>
-            <Button onClick={handleSaveEditedOrder}>Simpan Perubahan</Button>
+            <Button type="button" onClick={handleSaveEditedOrder}>
+              Simpan Perubahan
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1499,11 +1533,12 @@ function Orders() {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full" onClick={handlePrintInvoice}>
+                <Button type="button" variant="outline" className="w-full" onClick={handlePrintInvoice}>
                   <Printer className="mr-1.5 h-4 w-4" />
                   Cetak PDF
                 </Button>
                 <Button
+                  type="button"
                   variant="outline"
                   className="w-full"
                   disabled={renderingImg}
@@ -1513,6 +1548,7 @@ function Orders() {
                   Simpan Gambar
                 </Button>
                 <Button
+                  type="button"
                   className="col-span-2 w-full bg-success text-success-foreground hover:bg-success/90"
                   disabled={renderingImg}
                   onClick={() => handleDownloadAndSendReceiptImage(invoice, true)}
@@ -1601,7 +1637,7 @@ function Products() {
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={() => setEdit(emptyProduct())}>
+        <Button type="button" onClick={() => setEdit(emptyProduct())}>
           <Plus className="mr-1 h-4 w-4" />
           Tambah Produk Baru
         </Button>
@@ -1616,6 +1652,7 @@ function Products() {
             >
               <span>{c}</span>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
@@ -1628,6 +1665,7 @@ function Products() {
                 <Pencil className="h-3 w-3" />
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
@@ -1651,6 +1689,7 @@ function Products() {
             onChange={(e) => setCategoryName(e.target.value)}
           />
           <Button
+            type="button"
             onClick={() => {
               if (!categoryName.trim()) return;
               if (categoryEdit) renameCategory(categoryEdit, categoryName);
@@ -1664,6 +1703,7 @@ function Products() {
           </Button>
           {categoryEdit && (
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setCategoryEdit(null);
@@ -1702,6 +1742,7 @@ function Products() {
                 />
                 <div className="ml-auto flex">
                   <Button
+                    type="button"
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7"
@@ -1711,6 +1752,7 @@ function Products() {
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
+                    type="button"
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 text-destructive hover:text-destructive"
@@ -1863,10 +1905,12 @@ function Products() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEdit(null)}>
+            <Button type="button" variant="outline" onClick={() => setEdit(null)}>
               Batal
             </Button>
-            <Button onClick={save}>Simpan</Button>
+            <Button type="button" onClick={save}>
+              Simpan
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2081,7 +2125,7 @@ function Customers() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <Button onClick={openAddDialog} className="shrink-0">
+        <Button type="button" onClick={openAddDialog} className="shrink-0">
           <Plus className="mr-1.5 h-4 w-4" />
           Tambah Pelanggan
         </Button>
@@ -2229,10 +2273,10 @@ function Customers() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               Batal
             </Button>
-            <Button onClick={handleSaveCustomer}>
+            <Button type="button" onClick={handleSaveCustomer}>
               {editingKey ? "Simpan Perubahan" : "Tambah Pelanggan"}
             </Button>
           </DialogFooter>
@@ -2306,7 +2350,9 @@ function SettingsView() {
             )}
           </div>
         ))}
-        <Button onClick={save}>Simpan Semua Pengaturan</Button>
+        <Button type="button" onClick={save}>
+          Simpan Semua Pengaturan
+        </Button>
         <label className="flex items-center justify-between rounded-lg border p-4">
           <span>
             <span className="block font-medium">Status PO Hari Raya</span>
@@ -2322,6 +2368,7 @@ function SettingsView() {
           />
         </label>
         <Button
+          type="button"
           variant="outline"
           onClick={() => {
             resetDemo();
@@ -2378,7 +2425,7 @@ function SettingsView() {
               onChange={(e) => setPayment({ ...payment, qrisUrl: e.target.value })}
             />
           </div>
-          <Button onClick={save} className="w-full">
+          <Button type="button" onClick={save} className="w-full">
             Simpan Rekening & QRIS
           </Button>
         </Panel>
