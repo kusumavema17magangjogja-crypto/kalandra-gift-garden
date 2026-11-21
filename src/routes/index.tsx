@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Search,
@@ -112,6 +112,7 @@ function HomePage() {
   const navigate = useNavigate();
   const store = useStore();
   const { products, categories, settings, isAdmin } = store;
+  const anyStore = store as unknown as Record<string, unknown>;
 
   // --- STATE UI ---
   const [city, setCity] = useState<string>(CITIES[0] || "Jabodetabek");
@@ -141,7 +142,7 @@ function HomePage() {
   const [orderQty, setOrderQty] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  // Keranjang Belanja
+  // Keranjang Belanja Lokal (tetap tersedia jika store tidak punya drawer sendiri)
   const [cart, setCart] = useState<LocalCartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -184,7 +185,6 @@ function HomePage() {
     [settings.heroHeadline, settings.heroSubheadline, settings.heroImage]
   );
 
-  // Auto Slider
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
@@ -192,7 +192,6 @@ function HomePage() {
     return () => clearInterval(timer);
   }, [heroSlides.length]);
 
-  // Countdown Flash Sale
   useEffect(() => {
     const timer = setInterval(() => {
       setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
@@ -254,8 +253,38 @@ function HomePage() {
     return orderProduct.price + addonsTotal(selectedAddons);
   }, [orderProduct, selectedAddons]);
 
+  const handleOpenCart = () => {
+    if (typeof anyStore.setCartOpen === "function") {
+      (anyStore.setCartOpen as (open: boolean) => void)(true);
+      return;
+    }
+    setIsCartOpen(true);
+  };
+
   const handleAddToCart = () => {
     if (!orderProduct) return;
+
+    if (typeof anyStore.addToCart === "function") {
+      try {
+        (anyStore.addToCart as (payload: unknown) => void)({
+          product: orderProduct,
+          qty: orderQty,
+          addons: selectedAddons,
+          ribbon: ribbonColor,
+          to: cardTo || "Penerima",
+          from: cardFrom || "Pengirim",
+          message: cardMessage || "Semoga berkenan dan membawa kebahagiaan.",
+          deliveryDate,
+        });
+        setOrderProduct(null);
+        handleOpenCart();
+        toast.success(`${orderProduct.name} ditambahkan ke keranjang`);
+        return;
+      } catch {
+        // Fallback ke keranjang lokal di bawah
+      }
+    }
+
     const newItem: LocalCartItem = {
       key: `${orderProduct.id}-${Date.now()}`,
       product: orderProduct,
@@ -284,8 +313,6 @@ function HomePage() {
     const ribbonName =
       RIBBON_OPTIONS.find((r) => r.id === ribbonColor)?.name || ribbonColor;
 
-    // Jika store punya fungsi createOrder/placeOrder, simpan ke state admin juga
-    const anyStore = store as unknown as Record<string, unknown>;
     if (typeof anyStore.placeOrder === "function") {
       try {
         (anyStore.placeOrder as (payload: unknown) => void)({
@@ -360,9 +387,6 @@ function HomePage() {
 
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const anyStore = store as unknown as Record<string, unknown>;
-
-    // Coba panggil fungsi login dari useStore jika tersedia
     if (typeof anyStore.login === "function") {
       const ok = (anyStore.login as (email: string, pass?: string) => boolean)(
         adminEmail.trim() || "admin@kalandra.id",
@@ -375,13 +399,18 @@ function HomePage() {
         return;
       }
     }
-
-    // Fallback: arahkan ke /login jika ada halaman login khusus di proyek
     setIsAdminModalOpen(false);
     navigate({ to: "/login" as never });
   };
 
-  const totalCartItems = cart.reduce((acc, item) => acc + item.qty, 0);
+  const storeCartItems = Array.isArray(anyStore.cart)
+    ? (anyStore.cart as Array<{ qty?: number }>)
+    : null;
+
+  const totalCartItems = storeCartItems
+    ? storeCartItems.reduce((acc, item) => acc + (item.qty || 1), 0)
+    : cart.reduce((acc, item) => acc + item.qty, 0);
+
   const totalCartSubtotal = cart.reduce(
     (acc, item) => acc + item.unitTotal * item.qty,
     0
@@ -389,7 +418,6 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] text-[#1C2B22] font-sans relative overflow-x-hidden">
-      {/* ANIMASI KELOPAK BUNGA & HEADER BERJALAN */}
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0%); }
@@ -448,14 +476,13 @@ function HomePage() {
         </div>
       ))}
 
-      {/* BANNER JIKA PO TUTUP DARI PENGATURAN ADMIN */}
       {!settings.storeOpen && (
         <div className="bg-[#C87A5B] text-white text-center text-xs font-semibold py-2 px-4">
           Slot Pre-Order Hari Raya sedang penuh sementara. Hubungi WhatsApp kami untuk jadwal pengiriman terdekat.
         </div>
       )}
 
-      {/* 1. HEADER BERJALAN (RUNNING BAR) */}
+      {/* 1. HEADER BERJALAN */}
       <div className="bg-[#14452F] text-[#FAF6F0] text-xs py-2 px-4 flex items-center justify-between gap-4 border-b border-[#225C41]">
         <div className="overflow-hidden flex-1">
           <div className="animate-marquee gap-10 whitespace-nowrap">
@@ -496,7 +523,11 @@ function HomePage() {
       {/* 2. NAVBAR UTAMA */}
       <header className="sticky top-0 z-30 bg-[#FAF6F0]/95 backdrop-blur-md border-b border-[#E5DDD0] px-4 md:px-10 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/" })}
+            className="flex items-center gap-2.5 shrink-0 cursor-pointer text-left"
+          >
             <div className="w-10 h-10 rounded-xl bg-[#14452F] text-[#FAF6F0] flex items-center justify-center shadow-sm">
               <Gift className="w-5 h-5 text-[#E5C158]" />
             </div>
@@ -508,7 +539,7 @@ function HomePage() {
                 {settings.storeTagline || "Hampers & Seserahan"}
               </span>
             </div>
-          </Link>
+          </button>
 
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-[#2F3E35]">
             <a href="#flash-sale" className="hover:text-[#14452F] transition">
@@ -559,15 +590,15 @@ function HomePage() {
               </button>
             </form>
 
-            {/* Tombol Admin Kecil (Langsung ke /admin jika sudah login admin, atau buka modal login) */}
             {isAdmin ? (
-              <Link
-                to="/admin"
-                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] px-3 py-1.5 rounded-full transition"
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/admin" })}
+                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] px-3 py-1.5 rounded-full transition cursor-pointer"
               >
                 <LayoutDashboard className="w-3 h-3" />
                 <span>Panel Admin</span>
-              </Link>
+              </button>
             ) : (
               <button
                 type="button"
@@ -580,10 +611,9 @@ function HomePage() {
               </button>
             )}
 
-            {/* Tombol Keranjang */}
             <button
               type="button"
-              onClick={() => setIsCartOpen(true)}
+              onClick={handleOpenCart}
               className="relative p-2.5 rounded-full bg-[#14452F] text-white hover:bg-[#1C593D] transition cursor-pointer shadow-xs"
               title="Keranjang Belanja"
             >
@@ -817,7 +847,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* 6. KATALOG LANGSUNG & FILTER (TERHUBUNG KE PRODUK ADMIN) */}
+      {/* 6. KATALOG LANGSUNG & FILTER */}
       <section id="katalog" className="max-w-7xl mx-auto px-4 md:px-10 py-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
@@ -1287,7 +1317,6 @@ function HomePage() {
         </div>
       </footer>
 
-      {/* FLOATING WHATSAPP BUTTON */}
       <a
         href={waLink(
           settings.whatsappNumber,
@@ -1581,7 +1610,7 @@ function HomePage() {
         </div>
       )}
 
-      {/* DRAWER KERANJANG */}
+      {/* DRAWER KERANJANG LOKAL (FALLBACK) */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end">
           <div className="bg-[#FAF6F0] w-full max-w-md h-full flex flex-col justify-between shadow-2xl">
