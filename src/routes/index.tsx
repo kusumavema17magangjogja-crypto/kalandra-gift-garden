@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Search,
@@ -25,17 +25,33 @@ import {
   Truck,
   Camera,
   LayoutDashboard,
+  Pencil,
+  Trash2,
+  Eye,
+  Receipt,
+  Printer,
+  Send,
+  Users,
+  Settings,
+  Package,
+  Tag,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import {
   ADDONS,
+  CATEGORIES,
   CITIES,
+  IMAGES,
+  ORDER_STATUSES,
   SHIPPING_FEE,
   addonsTotal,
+  formatDate,
   formatIDR,
+  ribbonLabel,
   waLink,
   type CartItem,
   type Order,
+  type OrderStatus,
   type Product,
   type RibbonColor,
 } from "@/lib/data";
@@ -72,6 +88,15 @@ const RIBBON_OPTIONS: { id: RibbonColor; name: string; hex: string }[] = [
   { id: "burgundy", name: "Burgundy", hex: "#6E1E2A" },
 ];
 
+const PETALS = [
+  { left: "6%", dur: "14s", delay: "0s", size: 16, color: "#E8B4B8" },
+  { left: "22%", dur: "18s", delay: "3s", size: 13, color: "#D4A373" },
+  { left: "41%", dur: "15s", delay: "6s", size: 18, color: "#F2C6C2" },
+  { left: "63%", dur: "20s", delay: "1s", size: 14, color: "#E6CCB2" },
+  { left: "81%", dur: "16s", delay: "4s", size: 17, color: "#E8B4B8" },
+  { left: "93%", dur: "19s", delay: "7s", size: 12, color: "#DDB892" },
+];
+
 const ARTICLES = [
   {
     title: "5 Tips Memilih Warna Pita & Tema Seserahan Agar Senada dengan Dekorasi",
@@ -96,8 +121,9 @@ const ARTICLES = [
   },
 ];
 
+const ALL_STATUSES = Array.from(new Set([...ORDER_STATUSES, "Dibatalkan"])) as OrderStatus[];
+
 function HomePage() {
-  const navigate = useNavigate();
   const {
     products,
     categories,
@@ -108,23 +134,29 @@ function HomePage() {
     setCartOpen,
     addToCart,
     recordOrder,
+    setOrderStatus,
+    saveProduct,
+    deleteProduct,
+    addCategory,
+    deleteCategory,
+    updateSettings,
+    users,
+    orders,
     isAdmin,
     loginAdmin,
     user,
     logout,
   } = useStore();
 
-  // --- STATE UI ---
+  // --- STATE TOKO ---
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedMoment, setSelectedMoment] = useState("Semua");
   const [currentSlide, setCurrentSlide] = useState(0);
-
-  // Countdown Flash Sale
   const [secondsLeft, setSecondsLeft] = useState(5 * 3600 + 42 * 60 + 19);
 
-  // Modal Pemesanan Lengkap
+  // --- MODAL PEMESANAN ---
   const [orderProduct, setOrderProduct] = useState<Product | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -141,10 +173,33 @@ function HomePage() {
   const [orderQty, setOrderQty] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  // Modal Login Admin Kecil
+  // --- MODAL LOGIN ADMIN & PANEL ADMIN TERPADU ---
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPass, setAdminPass] = useState("");
+  const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
+  const [adminTab, setAdminTab] = useState<"orders" | "products" | "customers" | "settings">("orders");
+
+  // --- STATE KELOLA PESANAN & PRODUK DI ADMIN ---
+  const [deletedOrderIds, setDeletedOrderIds] = useState<string[]>([]);
+  const [previewCardOrder, setPreviewCardOrder] = useState<Order | null>(null);
+  const [previewInvoiceOrder, setPreviewInvoiceOrder] = useState<Order | null>(null);
+  const [newCatName, setNewCatName] = useState("");
+  const [editingProd, setEditingProd] = useState<Product | null>(null);
+  const [draftStoreName, setDraftStoreName] = useState(settings.storeName);
+  const [draftWa, setDraftWa] = useState(settings.whatsappNumber);
+  const [draftHours, setDraftHours] = useState(settings.operatingHours);
+
+  useEffect(() => {
+    setDraftStoreName(settings.storeName);
+    setDraftWa(settings.whatsappNumber);
+    setDraftHours(settings.operatingHours);
+  }, [settings]);
+
+  const uniqueCategories = useMemo(() => {
+    const list = Array.isArray(categories) ? categories : [];
+    return ["Semua", ...Array.from(new Set(list.filter((c) => c && c !== "Semua")))];
+  }, [categories]);
 
   const heroSlides = useMemo(
     () => [
@@ -172,7 +227,7 @@ function HomePage() {
         tag: "CORPORATE & HARI RAYA • 100% HALAL",
         title: "Kirim Apresiasi Berkelas untuk Klien & Keluarga",
         subtitle:
-          "Custom logo perusahaan, pengiriman instan Jabodetabek, serta packing kayu aman antar kota.",
+          "Custom logo perusahaan, pengiriman instan serta packing kayu aman antar kota.",
         image:
           "https://images.unsplash.com/photo-1513885535751-8b9238bd345a?auto=format&fit=crop&w=1600&q=80",
       },
@@ -203,10 +258,17 @@ function HomePage() {
     [products]
   );
 
-  const flashSaleProducts = useMemo(
-    () => activeProducts.slice(0, 4),
-    [activeProducts]
-  );
+  const flashSaleProducts = useMemo(() => {
+    const tagged = activeProducts.filter(
+      (p) =>
+        p.stock > 0 &&
+        (p.tags?.includes("popular") ||
+          p.tags?.includes("express") ||
+          (p.badge ?? "").toLowerCase().includes("promo"))
+    );
+    const source = tagged.length > 0 ? tagged : activeProducts.filter((p) => p.stock > 0);
+    return source.slice(0, 4);
+  }, [activeProducts]);
 
   const filteredProducts = useMemo(() => {
     return activeProducts.filter((p) => {
@@ -226,6 +288,11 @@ function HomePage() {
       return matchCat && matchMom && matchSearch;
     });
   }, [activeProducts, selectedCategory, selectedMoment, activeSearch]);
+
+  const visibleOrders = useMemo(
+    () => (Array.isArray(orders) ? orders.filter((o) => !deletedOrderIds.includes(o.id)) : []),
+    [orders, deletedOrderIds]
+  );
 
   const openOrderModal = (product: Product) => {
     setOrderProduct(product);
@@ -267,17 +334,15 @@ function HomePage() {
   const handleAddToCart = () => {
     if (!orderProduct) return;
     if (isAdmin) {
-      toast.info("Mode Admin aktif: gunakan tombol Pesan via WA atau keluar dari mode Admin untuk tes keranjang pembeli.");
+      toast.info("Mode Admin aktif: gunakan tombol Pesan via WA atau buka Panel Admin.");
       return;
     }
-
     const item = buildCartItem(orderProduct);
     const err = addToCart(item);
     if (err) {
       toast.error(err);
       return;
     }
-
     setOrderProduct(null);
     setCartOpen(true);
     toast.success(`${orderProduct.name} ditambahkan ke keranjang`);
@@ -295,7 +360,6 @@ function HomePage() {
     const ribbonName =
       RIBBON_OPTIONS.find((r) => r.id === ribbonColor)?.name || ribbonColor;
 
-    // Catat langsung ke daftar pesanan Admin
     const newOrder: Order = {
       id: "KLD-" + Math.floor(100000 + Math.random() * 900000),
       customerName: customerName.trim() || cardFrom.trim() || "Pelanggan Web",
@@ -346,8 +410,31 @@ function HomePage() {
     setIsAdminModalOpen(false);
     setAdminEmail("");
     setAdminPass("");
-    toast.success("Berhasil masuk ke Admin Panel");
-    navigate({ to: "/admin" });
+    setAdminTab("orders");
+    setAdminDrawerOpen(true);
+    toast.success("Login Admin berhasil — Panel Admin terbuka di halaman ini");
+  };
+
+  const handleSaveEditedProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProd) return;
+    if (!editingProd.name.trim() || editingProd.price <= 0) {
+      toast.error("Nama dan harga produk wajib diisi");
+      return;
+    }
+    saveProduct(editingProd);
+    setEditingProd(null);
+    toast.success("Produk tersimpan");
+  };
+
+  const handleSaveStoreSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettings({
+      storeName: draftStoreName.trim() || settings.storeName,
+      whatsappNumber: draftWa.replace(/\D/g, "") || settings.whatsappNumber,
+      operatingHours: draftHours.trim() || settings.operatingHours,
+    });
+    toast.success("Pengaturan toko diperbarui");
   };
 
   return (
@@ -387,14 +474,7 @@ function HomePage() {
       `}</style>
 
       {/* KELOPAK BUNGA JATUH */}
-      {[
-        { left: "6%", dur: "14s", delay: "0s", size: 16, color: "#E8B4B8" },
-        { left: "22%", dur: "18s", delay: "3s", size: 13, color: "#D4A373" },
-        { left: "41%", dur: "15s", delay: "6s", size: 18, color: "#F2C6C2" },
-        { left: "63%", dur: "20s", delay: "1s", size: 14, color: "#E6CCB2" },
-        { left: "81%", dur: "16s", delay: "4s", size: 17, color: "#E8B4B8" },
-        { left: "93%", dur: "19s", delay: "7s", size: 12, color: "#DDB892" },
-      ].map((p, i) => (
+      {PETALS.map((p, i) => (
         <div
           key={i}
           className="petal"
@@ -436,6 +516,7 @@ function HomePage() {
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
+              aria-label="Pilih kota pengiriman"
               className="bg-transparent text-white focus:outline-none cursor-pointer"
             >
               {CITIES.map((c) => (
@@ -493,7 +574,7 @@ function HomePage() {
             </a>
           </nav>
 
-          {/* Pencarian + Tombol Kaca Pembesar + Login Admin Kecil + Keranjang */}
+          {/* Pencarian + Kaca Pembesar + Login Admin Kecil + Keranjang */}
           <div className="flex items-center gap-2 md:gap-3">
             <form
               onSubmit={(e) => {
@@ -518,6 +599,7 @@ function HomePage() {
               <button
                 type="submit"
                 title="Cari Produk"
+                aria-label="Cari Produk"
                 className="w-7 h-7 rounded-full bg-[#14452F] text-white flex items-center justify-center hover:bg-[#1D5B3F] transition cursor-pointer shrink-0"
               >
                 <Search className="w-3.5 h-3.5" />
@@ -525,23 +607,24 @@ function HomePage() {
             </form>
 
             {isAdmin ? (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => navigate({ to: "/admin" })}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] hover:bg-[#1D5B3F] px-3 py-1.5 rounded-full transition cursor-pointer"
+                  onClick={() => setAdminDrawerOpen(true)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#14452F] hover:bg-[#1D5B3F] px-3 py-1.5 rounded-full transition cursor-pointer whitespace-nowrap"
                 >
                   <LayoutDashboard className="w-3 h-3" />
-                  <span>Panel Admin</span>
+                  <span>Admin ({visibleOrders.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     logout();
+                    setAdminDrawerOpen(false);
                     toast.success("Keluar dari mode Admin");
                   }}
                   title="Keluar Mode Admin"
-                  className="text-[11px] text-[#5C665E] hover:text-red-600 bg-white border border-[#DDD4C7] px-2 py-1.5 rounded-full cursor-pointer"
+                  className="text-[11px] text-[#5C665E] hover:text-red-600 bg-white border border-[#DDD4C7] px-2 py-1.5 rounded-full cursor-pointer whitespace-nowrap"
                 >
                   Keluar
                 </button>
@@ -551,7 +634,8 @@ function HomePage() {
                 type="button"
                 onClick={() => setIsAdminModalOpen(true)}
                 title="Login Admin"
-                className="flex items-center gap-1 text-[11px] font-medium text-[#5C665E] hover:text-[#14452F] bg-white border border-[#DDD4C7] px-2.5 py-1.5 rounded-full transition cursor-pointer"
+                aria-label="Login Admin"
+                className="flex items-center gap-1 text-[11px] font-medium text-[#5C665E] hover:text-[#14452F] bg-white border border-[#DDD4C7] px-2.5 py-1.5 rounded-full transition cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <Lock className="w-3 h-3" />
                 <span className="hidden sm:inline">Admin</span>
@@ -560,15 +644,10 @@ function HomePage() {
 
             <button
               type="button"
-              onClick={() => {
-                if (isAdmin) {
-                  toast.info("Admin tidak memiliki keranjang belanja.");
-                  return;
-                }
-                setCartOpen(true);
-              }}
-              className="relative p-2.5 rounded-full bg-[#14452F] text-white hover:bg-[#1C593D] transition cursor-pointer shadow-xs"
+              onClick={() => setCartOpen(true)}
+              className="relative p-2.5 rounded-full bg-[#14452F] text-white hover:bg-[#1C593D] transition cursor-pointer shadow-xs shrink-0"
               title="Keranjang Belanja"
+              aria-label="Keranjang Belanja"
             >
               <ShoppingBag className="w-4 h-4" />
               {cartCount > 0 && (
@@ -611,7 +690,7 @@ function HomePage() {
               </p>
 
               <div className="flex flex-wrap gap-2.5">
-                {categories.slice(0, 6).map((cat) => (
+                {uniqueCategories.slice(1, 7).map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -638,6 +717,7 @@ function HomePage() {
               (prev) => (prev - 1 + heroSlides.length) % heroSlides.length
             )
           }
+          aria-label="Slide sebelumnya"
           className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -647,6 +727,7 @@ function HomePage() {
           onClick={() =>
             setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
           }
+          aria-label="Slide berikutnya"
           className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
         >
           <ChevronRight className="w-5 h-5" />
@@ -658,6 +739,7 @@ function HomePage() {
               key={i}
               type="button"
               onClick={() => setCurrentSlide(i)}
+              aria-label={`Slide ${i + 1}`}
               className={`h-2 rounded-full transition-all cursor-pointer ${
                 i === currentSlide ? "w-7 bg-[#E5C158]" : "w-2 bg-white/50"
               }`}
@@ -813,7 +895,7 @@ function HomePage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {["Semua", ...categories].map((cat) => (
+            {uniqueCategories.map((cat) => (
               <button
                 type="button"
                 key={cat}
@@ -1199,7 +1281,7 @@ function HomePage() {
               Kategori Populer
             </h4>
             <ul className="space-y-2 text-xs text-white/80">
-              {categories.slice(0, 4).map((c) => (
+              {uniqueCategories.slice(1, 5).map((c) => (
                 <li key={c}>
                   <a
                     href="#katalog"
@@ -1237,13 +1319,11 @@ function HomePage() {
                 <button
                   type="button"
                   onClick={() =>
-                    isAdmin
-                      ? navigate({ to: "/admin" })
-                      : setIsAdminModalOpen(true)
+                    isAdmin ? setAdminDrawerOpen(true) : setIsAdminModalOpen(true)
                   }
                   className="hover:text-white cursor-pointer"
                 >
-                  Portal Admin
+                  Panel Admin
                 </button>
               </li>
             </ul>
@@ -1299,6 +1379,7 @@ function HomePage() {
               <button
                 type="button"
                 onClick={() => setOrderProduct(null)}
+                aria-label="Tutup modal pemesanan"
                 className="p-2 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1397,6 +1478,7 @@ function HomePage() {
                       <button
                         type="button"
                         onClick={() => setOrderQty((q) => Math.max(1, q - 1))}
+                        aria-label="Kurangi jumlah"
                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                       >
                         <Minus className="w-3.5 h-3.5" />
@@ -1406,7 +1488,10 @@ function HomePage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setOrderQty((q) => q + 1)}
+                        onClick={() =>
+                          setOrderQty((q) => Math.min(orderProduct.stock || 99, q + 1))
+                        }
+                        aria-label="Tambah jumlah"
                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -1574,6 +1659,7 @@ function HomePage() {
               <button
                 type="button"
                 onClick={() => setIsAdminModalOpen(false)}
+                aria-label="Tutup modal admin"
                 className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1610,9 +1696,527 @@ function HomePage() {
                 type="submit"
                 className="w-full bg-[#14452F] text-white text-xs font-semibold py-2.5 rounded-xl cursor-pointer"
               >
-                Masuk ke Admin Panel
+                Masuk ke Panel Admin
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PANEL ADMIN TERPADU DI DALAM HALAMAN INDEX */}
+      {isAdmin && adminDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-xs flex justify-end">
+          <div className="bg-[#FAF6F0] w-full max-w-4xl h-full overflow-y-auto shadow-2xl border-l border-[#DFD4C0] flex flex-col">
+            <div className="sticky top-0 z-10 bg-[#14452F] text-white px-5 py-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <LayoutDashboard className="w-5 h-5 text-[#E5C158]" />
+                <div>
+                  <h2 className="font-serif text-lg font-semibold leading-tight">
+                    Panel Admin {settings.storeName}
+                  </h2>
+                  <p className="text-[11px] text-white/75">
+                    Kelola pesanan, katalog, pelanggan & pengaturan langsung di halaman utama
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminDrawerOpen(false)}
+                aria-label="Tutup Panel Admin"
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-white border-b border-[#E5DDD0] px-5 py-2.5 flex flex-wrap gap-2">
+              {[
+                { id: "orders", label: `Pesanan (${visibleOrders.length})`, icon: Package },
+                { id: "products", label: `Katalog (${products.length})`, icon: Tag },
+                { id: "customers", label: `Pelanggan (${users.length})`, icon: Users },
+                { id: "settings", label: "Pengaturan Toko", icon: Settings },
+              ].map((t) => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setAdminTab(t.id as typeof adminTab)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      adminTab === t.id
+                        ? "bg-[#14452F] text-white"
+                        : "bg-[#FAF6F0] text-[#2F3E35] hover:bg-[#EFE7DA]"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="p-5 flex-1 space-y-5">
+              {adminTab === "orders" && (
+                <div className="space-y-3">
+                  {visibleOrders.map((o) => (
+                    <div
+                      key={o.id}
+                      className="bg-white rounded-2xl border border-[#E5DDD0] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#14452F]">
+                            {o.id}
+                          </span>
+                          <span className="text-sm font-semibold">{o.customerName}</span>
+                          <span className="text-xs text-gray-500">• {o.city}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {(o.items ?? []).map((i) => `${i.name} (${i.qty}x)`).join(", ")}
+                        </p>
+                        <p className="text-[11px] text-gray-500">
+                          Kirim: {formatDate(o.deliveryDate)} • Total:{" "}
+                          <strong className="text-[#14452F]">{formatIDR(o.total)}</strong>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={o.status}
+                          onChange={(e) => {
+                            setOrderStatus(o.id, e.target.value as OrderStatus);
+                            toast.success(`Status ${o.id} → ${e.target.value}`);
+                          }}
+                          aria-label={`Status pesanan ${o.id}`}
+                          className="border border-[#D8CFC0] rounded-xl px-2.5 py-1.5 text-xs bg-white"
+                        >
+                          {ALL_STATUSES.map((st) => (
+                            <option key={st} value={st}>
+                              {st}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => setPreviewCardOrder(o)}
+                          className="px-2.5 py-1.5 rounded-xl border border-[#D8CFC0] text-xs hover:bg-gray-50 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Kartu
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPreviewInvoiceOrder(o)}
+                          className="px-2.5 py-1.5 rounded-xl border border-[#D8CFC0] text-xs hover:bg-gray-50 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Receipt className="w-3.5 h-3.5" /> Struk
+                        </button>
+
+                        <a
+                          href={waLink(
+                            o.phone,
+                            `Halo ${o.customerName}, update pesanan ${o.id} (${o.status}) total ${formatIDR(o.total)}.`
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-700 text-white text-xs hover:bg-emerald-800 flex items-center gap-1"
+                        >
+                          <Send className="w-3.5 h-3.5" /> WA
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeletedOrderIds((prev) => [...prev, o.id]);
+                            toast.success(`Pesanan ${o.id} dihapus dari tampilan`);
+                          }}
+                          aria-label={`Hapus pesanan ${o.id}`}
+                          className="p-1.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {visibleOrders.length === 0 && (
+                    <p className="text-center text-sm text-gray-500 py-8 bg-white rounded-2xl border border-[#E5DDD0]">
+                      Belum ada pesanan masuk.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {adminTab === "products" && (
+                <div className="space-y-5">
+                  <div className="bg-white rounded-2xl border border-[#E5DDD0] p-4 space-y-3">
+                    <h3 className="font-serif text-base font-semibold text-[#14452F]">
+                      Kelola Kategori
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map((c) => (
+                        <span
+                          key={c}
+                          className="inline-flex items-center gap-1.5 bg-[#FAF6F0] border border-[#DFD4C0] px-3 py-1 rounded-full text-xs"
+                        >
+                          {c}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const err = deleteCategory(c);
+                              if (err) toast.error(err);
+                              else toast.success("Kategori dihapus");
+                            }}
+                            aria-label={`Hapus kategori ${c}`}
+                            className="text-red-600 hover:text-red-800 cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        placeholder="Nama kategori baru..."
+                        className="flex-1 border border-[#D8CFC0] rounded-xl px-3 py-2 text-xs bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newCatName.trim()) return;
+                          addCategory(newCatName.trim());
+                          setNewCatName("");
+                          toast.success("Kategori ditambahkan");
+                        }}
+                        className="bg-[#14452F] text-white px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                      >
+                        Tambah
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-serif text-base font-semibold text-[#14452F]">
+                      Daftar Produk
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingProd({
+                          id: "p-" + Date.now(),
+                          name: "",
+                          category: CATEGORIES[0],
+                          price: 150000,
+                          stock: 10,
+                          image: IMAGES.hero,
+                          description: "",
+                          active: true,
+                          tags: [],
+                          rating: 5,
+                          reviews: 0,
+                        })
+                      }
+                      className="bg-[#14452F] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Produk Baru
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {products.map((p) => (
+                      <div
+                        key={p.id}
+                        className="bg-white rounded-2xl border border-[#E5DDD0] p-3 flex gap-3 items-center"
+                      >
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          className="w-16 h-16 rounded-xl object-cover shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-xs truncate">{p.name}</p>
+                          <p className="text-[11px] text-gray-500">{p.category}</p>
+                          <p className="text-xs font-bold text-[#14452F] mt-0.5">
+                            {formatIDR(p.price)} • Stok {p.stock}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingProd(p)}
+                            aria-label={`Edit ${p.name}`}
+                            className="p-2 rounded-lg border border-[#D8CFC0] hover:bg-gray-50 cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              deleteProduct(p.id);
+                              toast.success("Produk dihapus");
+                            }}
+                            aria-label={`Hapus ${p.name}`}
+                            className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === "customers" && (
+                <div className="bg-white rounded-2xl border border-[#E5DDD0] overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b text-left text-gray-500">
+                        <th className="p-3">Nama</th>
+                        <th className="p-3">Email</th>
+                        <th className="p-3">No. HP</th>
+                        <th className="p-3">Kota</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.email} className="border-b last:border-0">
+                          <td className="p-3 font-medium">{u.name}</td>
+                          <td className="p-3">{u.email}</td>
+                          <td className="p-3">{u.phone || "-"}</td>
+                          <td className="p-3">{u.city || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {adminTab === "settings" && (
+                <form
+                  onSubmit={handleSaveStoreSettings}
+                  className="bg-white rounded-2xl border border-[#E5DDD0] p-4 space-y-3 text-xs"
+                >
+                  <div>
+                    <label className="block font-semibold mb-1">Nama Toko</label>
+                    <input
+                      type="text"
+                      value={draftStoreName}
+                      onChange={(e) => setDraftStoreName(e.target.value)}
+                      className="w-full border border-[#D8CFC0] rounded-xl px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Nomor WhatsApp (628...)</label>
+                    <input
+                      type="text"
+                      value={draftWa}
+                      onChange={(e) => setDraftWa(e.target.value)}
+                      className="w-full border border-[#D8CFC0] rounded-xl px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Jam Operasional</label>
+                    <input
+                      type="text"
+                      value={draftHours}
+                      onChange={(e) => setDraftHours(e.target.value)}
+                      className="w-full border border-[#D8CFC0] rounded-xl px-3 py-2"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-[#14452F] text-white px-5 py-2.5 rounded-xl font-semibold cursor-pointer"
+                  >
+                    Simpan Pengaturan
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT / TAMBAH PRODUK ADMIN */}
+      {editingProd && (
+        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveEditedProduct}
+            className="bg-white rounded-2xl max-w-md w-full p-5 space-y-3 text-xs border border-[#E5DDD0]"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-lg font-semibold text-[#14452F]">
+                Simpan Produk
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingProd(null)}
+                className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Nama Produk</label>
+              <input
+                type="text"
+                required
+                value={editingProd.name}
+                onChange={(e) => setEditingProd({ ...editingProd, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-semibold mb-1">Harga (Rp)</label>
+                <input
+                  type="number"
+                  required
+                  value={editingProd.price}
+                  onChange={(e) => setEditingProd({ ...editingProd, price: +e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Stok</label>
+                <input
+                  type="number"
+                  required
+                  value={editingProd.stock}
+                  onChange={(e) => setEditingProd({ ...editingProd, stock: +e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Kategori</label>
+              <input
+                type="text"
+                required
+                value={editingProd.category}
+                onChange={(e) => setEditingProd({ ...editingProd, category: e.target.value })}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">URL Gambar</label>
+              <input
+                type="text"
+                required
+                value={editingProd.image}
+                onChange={(e) => setEditingProd({ ...editingProd, image: e.target.value })}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Deskripsi</label>
+              <textarea
+                rows={2}
+                value={editingProd.description}
+                onChange={(e) => setEditingProd({ ...editingProd, description: e.target.value })}
+                className="w-full border border-gray-300 rounded-xl p-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingProd(null)}
+                className="px-4 py-2 rounded-xl border cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-[#14452F] text-white font-semibold cursor-pointer"
+              >
+                Simpan
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL KARTU UCAPAN PESANAN */}
+      {previewCardOrder && (
+        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 text-center border border-[#E5DDD0]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-[#14452F]">
+                Kartu Ucapan • {previewCardOrder.id}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewCardOrder(null)}
+                className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Untuk: <strong>{previewCardOrder.items?.[0]?.to || "-"}</strong> • Pita{" "}
+              <strong>{ribbonLabel(previewCardOrder.items?.[0]?.ribbon || "emerald")}</strong>
+            </p>
+            <p className="font-serif italic text-sm bg-[#FAF6F0] p-4 rounded-xl border border-[#E5DDD0]">
+              "{previewCardOrder.items?.[0]?.message || "-"}"
+            </p>
+            <p className="text-xs text-[#C87A5B] font-semibold">
+              Dari: {previewCardOrder.items?.[0]?.from || previewCardOrder.customerName}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL STRUK PESANAN */}
+      {previewInvoiceOrder && (
+        <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 text-xs border border-[#E5DDD0]">
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="font-serif text-base font-bold text-[#14452F]">
+                Struk • {previewInvoiceOrder.id}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewInvoiceOrder(null)}
+                className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p>
+              Pemesan: <strong>{previewInvoiceOrder.customerName}</strong> ({previewInvoiceOrder.city})
+            </p>
+            <p>
+              Item:{" "}
+              {(previewInvoiceOrder.items ?? [])
+                .map((i) => `${i.name} (${i.qty}x)`)
+                .join(", ")}
+            </p>
+            <p className="font-bold text-sm text-[#14452F] border-t pt-2">
+              Total: {formatIDR(previewInvoiceOrder.total)}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 py-2 rounded-xl border flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" /> Cetak
+              </button>
+              <a
+                href={waLink(
+                  previewInvoiceOrder.phone,
+                  `Struk ${previewInvoiceOrder.id} (${settings.storeName}) total ${formatIDR(previewInvoiceOrder.total)}.`
+                )}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-2 rounded-xl bg-emerald-700 text-white flex items-center justify-center gap-1"
+              >
+                <Send className="w-3.5 h-3.5" /> Kirim WA
+              </a>
+            </div>
           </div>
         </div>
       )}
